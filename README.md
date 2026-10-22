@@ -2,27 +2,25 @@
 
 ## Project Overview
 
-This project aims to develop a cloud-based data engineering pipeline that collects, processes, and analyzes regularly updated electricity market data published by the Independent Electricity System Operator (IESO) in Ontario, Canada. The platform is designed to integrate Azure Data Factory, Azure Functions, Kafka-compatible Azure Event Hubs, Azure Databricks, PySpark, Spark SQL, Delta Lake, and Power BI into an automated data workflow.
+This project aims to develop a data engineering pipeline that collects, processes, and analyzes regularly updated electricity market data published by the Independent Electricity System Operator (IESO) in Ontario, Canada. The platform is designed to integrate Azure Data Factory, Azure Functions, Kafka compatible Azure Event Hubs, Azure Databricks, PySpark, Spark SQL, Delta Lake, and Power BI into an automated data workflow.
 
-The project focuses on data engineering rather than price forecasting or machine learning. Its main goal is to make public electricity market information reliable, traceable, and accessible for business analysis. The architecture and milestones below describe the planned system, not a completed deployment.
+The project focuses on data engineering rather than price forecasting or machine learning. Its main goal is to make public electricity market information reliable, traceable, and accessible for data analysis or general users and stakeholders.
 
 ### Project Status
 
-- Current stage: Project planning and source-access validation.
-- Completed: Verified that the IESO Real-Time Energy LMP report can be downloaded through Python using an unauthenticated HTTPS request.
+- Current stage: Project planning and source access validation.
+- Verified that the IESO Real-Time Energy LMP report can be downloaded through Python using an unauthenticated HTTPS request.
 - Verified test result: HTTP 200; a CSV file of 488,964 bytes was downloaded in approximately 1.1 seconds during a local test.
-- Next milestone: Configure GitHub and Azure, then demonstrate an ADF-triggered Azure Function archiving an IESO report in Azure Data Lake Storage Gen2.
-- Not yet implemented: Cloud orchestration, Event Hubs publishing, Databricks transformations, SQL marts, and Power BI dashboard.
 
 ## 1. Business Problem and Objectives
 
-Ontario's wholesale electricity market produces pricing, demand, and generation reports at different frequencies and in different formats. This project will consolidate these reports into an analytics-ready platform for market analysts, energy purchasers, generators, and other electricity-sector stakeholders.
+Ontario's wholesale electricity market produces pricing, demand, and generation reports at different frequencies and in different formats. This project will consolidate these reports into an analytics ready platform for market analysts, energy purchasers, generators, and other stakeholders.
 
 ### Business Questions
 
-- What are the latest real-time electricity prices at different Ontario pricing locations?
+- What are the latest real time electricity prices at different Ontario pricing locations?
 - How do wholesale electricity prices change throughout the day?
-- Which locations experience higher price volatility or congestion-related price differences?
+- Which locations experience higher price volatility or congestion related price differences?
 - How do day-ahead hourly prices compare with real-time prices for the same location and delivery hour?
 - How does Ontario electricity demand vary by time of day and across days?
 - How do demand and generation conditions relate to observed market-price changes?
@@ -30,14 +28,13 @@ Ontario's wholesale electricity market produces pricing, demand, and generation 
 
 ### Engineering Objectives
 
-- Automate retrieval of genuine IESO public CSV and XML reports.
-- Support scheduled incremental ingestion rather than repeatedly reprocessing unchanged files.
+- Automate retrieval of IESO public CSV and XML reports.
 - Handle source corrections, missing reports, duplicate records, and pipeline interruptions.
-- Implement Kafka-compatible event messaging through Azure Event Hubs.
+- Implement Kafka event messaging through Azure Event Hubs.
 - Build an Azure Databricks lakehouse using Bronze, Silver, and Gold Delta tables.
 - Apply PySpark and SQL to create validated, relational analytical datasets.
-- Use Azure Data Factory for cross-service orchestration and Databricks Jobs for Spark execution.
-- Provide a Power BI dashboard and a separate data-pipeline health view.
+- Use Azure Data Factory for cross service orchestration and Databricks Jobs for Spark execution.
+- Provide Power BI dashboard for visualization as output.
 - Keep Python, SQL, orchestration definitions, tests, and cloud configurations under GitHub version control.
 
 ## 2. Project Architecture
@@ -82,30 +79,33 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 ### Cloud Services and Their Responsibilities
 
 - Azure Data Factory (ADF)
-  - Own scheduled triggers and cross-service pipeline dependencies.
+  - Own scheduled triggers and cross service pipeline dependencies.
   - Invoke the Python Azure Function and Databricks Jobs.
   - Record pipeline success, failure, and retries.
-  - Do not act as a Kafka broker or transport individual streaming messages.
+  - 
 - Azure Functions
   - Execute Python code to retrieve IESO reports through HTTPS.
   - Check whether source files are new or revised.
   - Archive the original source reports and publish accepted records to Event Hubs.
+
 - Azure Data Lake Storage Gen2
   - Preserve raw, versioned IESO reports for recovery and audit purposes.
   - Hold Delta Lake analytical data where configured through Databricks and Unity Catalog.
+ 
 - Azure Event Hubs
-  - Provide a managed Kafka-compatible endpoint for event producers and consumers.
+  - Provide a managed Kafka compatible endpoint for event producers and consumers.
   - Buffer new and revised market observations until Databricks processes them.
   - Replace the need for a separate cloud-hosted Apache Kafka cluster in the initial deployment.
+  
 - Azure Databricks
   - Ingest Kafka messages using Spark Structured Streaming.
   - Process data incrementally using PySpark and Spark SQL.
-  - Organize analytical data into Bronze, Silver, and Gold Delta tables.
+  - Organize analytical data into Bronze, Silver, and Gold Delta tables during ETL.
   - Execute Spark tasks through Databricks Jobs invoked by ADF.
-- Unity Catalog
-  - Manage metadata, permissions, and data lineage for governed tables.
+  
 - Databricks SQL and Power BI
   - Query curated Gold tables and visualize market conditions and data freshness.
+
 - GitHub and GitHub Actions
   - Version-control Python, SQL, infrastructure, ADF definitions, and Databricks Bundles.
   - Automate linting, tests, validation, and approved deployments.
@@ -120,10 +120,9 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 - Important distinction: The market reporting interval is not necessarily the same as the time at which a report file is published.
 - Source schemas, actual header names, and exact deduplication keys will be validated from downloaded files during development.
 
-### 3.1 Real-Time Energy LMP (CSV) - MVP
+### 3.1 Real-Time Energy LMP (CSV)
 
 - Official report: Real-time 5-min Energy LMP Report.
-- Latest file: `PUB_RealtimeEnergyLMP.csv`
 - URL: https://reports-public.ieso.ca/public/RealtimeEnergyLMP/PUB_RealtimeEnergyLMP.csv
 - Archive directory: https://reports-public.ieso.ca/public/RealtimeEnergyLMP/
 - Format: CSV.
@@ -134,15 +133,6 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
   - Delivery date, hour, and five-minute reporting interval.
   - Generator or load pricing-location identifier.
   - Price components associated with energy, transmission losses, and congestion.
-- Planned business use:
-  - Monitor recent electricity market prices by location.
-  - Analyze price volatility, congestion components, and price differences across locations.
-  - Calculate hourly real-time price summaries for comparison with day-ahead prices.
-- Planned ingestion:
-  - ADF initiates frequent source checks, initially every five minutes.
-  - Python archives only new or revised report contents and publishes identifiable observations to Event Hubs.
-- Important consideration:
-  - Repeated downloads can contain observations already retrieved; report versions and business keys must be tracked separately.
 
 ### 3.2 Real-Time Totals / Ontario Demand (CSV or XML) - MVP
 
@@ -157,16 +147,6 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
   - Total energy scheduled in the IESO-administered market.
   - System losses, load, and scheduled operating-reserve quantities where provided by the report.
   - Delivery date, hour, interval, and associated system-level measurements.
-- Planned business use:
-  - Monitor provincial electricity demand throughout the day.
-  - Compare electricity demand with contemporaneous real-time prices.
-  - Analyze peak-demand periods and short-term demand variability.
-- Planned ingestion:
-  - Poll on the same initial schedule as Real-Time LMP.
-  - Preserve the source-defined distinction between Ontario Demand and Market Demand.
-- Important consideration:
-  - Demand is a system-level measurement, not a separate demand value for each LMP pricing location.
-  - Joining this report with LMP data requires matching reporting intervals rather than assuming a common location key.
 
 ### 3.3 Day-Ahead Hourly Energy LMP (CSV) - Full Version
 
@@ -181,16 +161,6 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
   - Day-ahead energy LMP for generator and load pricing locations.
   - Hourly delivery periods and the relevant pricing locations.
   - Energy price components, including losses and congestion.
-- Planned business use:
-  - Compare day-ahead and real-time electricity prices.
-  - Analyze hourly price spreads and periods of disagreement between markets.
-  - Assess price volatility for selected locations and hours.
-- Planned ingestion:
-  - Schedule collection around the expected daily publication period.
-  - Reconcile reports that have been republished or corrected.
-- Important consideration:
-  - The day-ahead price is a market outcome, not a conventional statistical forecast of the real-time price.
-  - Hourly day-ahead values must be compared with appropriately aggregated five-minute real-time observations.
 
 ### 3.4 Generator Output and Capability (XML) - Full Version
 
@@ -207,18 +177,8 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
   - Hourly output in MW.
   - Available capability where applicable.
   - Forecast generation for variable sources such as wind and solar instead of capability where specified.
-- Planned business use:
-  - Describe generation output and generation mix.
-  - Compare hourly generation conditions with market demand and price conditions.
-  - Examine variation in facility output over time.
-- Planned ingestion:
-  - Poll periodically for changes to hourly or cumulative daily reports.
-  - Preserve the original XML and parse it into structured Kafka events or Delta records.
-- Important consideration:
-  - Output, capability, and forecast are not interchangeable measurements.
-  - Generator identifiers may not directly match pricing-location identifiers. Any facility-to-price mapping must be explicitly validated.
 
-### 3.5 Historical Generator Output and Capability (CSV) - Backfill Option
+### 3.5 Historical Generator Output and Capability (CSV) (Backup)
 
 - Official report: Monthly Generator Output and Capability Data.
 - Latest CSV file: `PUB_GenOutputCapabilityMonth.csv`
@@ -229,24 +189,14 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 - What the data represents:
   - Historical hourly generator measurements organized within monthly reporting files.
   - Generation output and related capability/forecast measurements, as defined by the report.
-- Planned business use:
-  - Load historical generating-facility activity before the continuous collector begins operating.
-  - Validate longer-term generation patterns.
-- Important consideration:
-  - This historical CSV is different from the current XML report and requires its own parsing and reconciliation logic.
 
-### 3.6 Historical Ontario and Market Demand (CSV) - Backfill Option
-
+### 3.6 Historical Ontario and Market Demand (CSV) (Backup)
 - Official report: Historical hourly Ontario and Market Demand.
 - Report directory: https://reports-public.ieso.ca/public/Demand/
 - Format: CSV.
 - Historical coverage: IESO lists annual hourly demand files from 2002 onward.
 - What the data represents:
   - Hourly Ontario Demand and Market Demand observations over historical periods.
-- Planned business use:
-  - Provide longer-term reference data for demand patterns and seasonality.
-- Important consideration:
-  - Historical hourly demand and current five-minute Real-Time Totals are different report families and should not be merged without harmonizing definitions and time grains.
 
 ### 3.7 Source and Time Conventions
 
@@ -294,8 +244,7 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
   - `mart_price_volatility`: Price variation by time and pricing location.
   - `mart_hourly_price_spread`: Day-ahead versus hourly real-time price differences.
   - `mart_pipeline_freshness`: Source and processing freshness indicators.
-- Validate fact-table grain and referential integrity through SQL tests.
-- Avoid many-to-many joins or invalid comparisons between five-minute and hourly data.
+- Validate table and referential integrity through SQL tests.
 
 ## 5. Orchestration and Scheduling
 
@@ -311,7 +260,7 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
   - LMP and demand collection: Every five minutes.
   - Databricks incremental processing: Every 15 minutes.
   - Generator report collection: Every five to ten minutes once added.
-  - Day-ahead report collection: Near expected publication, with daily reconciliation.
+  - Day ahead report collection: Near expected publication, with daily reconciliation.
 - Refine schedules after measuring real publication delay, actual data volume, and Azure operating cost.
 - Use cost-conscious incremental Spark processing where practical instead of running Databricks compute continuously.
 
@@ -332,7 +281,7 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 - Platform: Power BI connected to curated Databricks SQL tables.
 - Planned report pages:
   - Market Overview: Recent prices, Ontario demand, latest reporting period, and key changes.
-  - Real-Time vs Day-Ahead: Hourly price differences and market comparisons.
+  - Real Time vs Day Ahead: Hourly price differences and market comparisons.
   - Demand and Generation: Provincial load patterns and generating-facility output.
   - Pipeline Health: Report freshness, ingestion lag, validation failures, and workflow status.
 - Validate dashboard values against SQL queries.
@@ -343,9 +292,8 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 
 - Primary development environment: Azure and Azure Databricks.
 - Source of truth: GitHub repository.
-- Azure Data Factory pipelines: GitHub integration for version-controlled definitions.
+- Azure Data Factory pipelines: GitHub integration for version controlled definitions.
 - Databricks development: Git folders connected to the repository.
-- Databricks deployments: Declarative Automation Bundles with separate development and production targets.
 - Azure Functions: Python source code deployed from GitHub.
 - GitHub Actions: Unit tests, linting, validation, and approved deployments.
 - Cloud resource provisioning: Document initially; add Bicep or Terraform for reproducibility.
@@ -385,7 +333,7 @@ ontario-electricity-lakehouse/
 
 ## 9. Project Milestones
 
-### M1. Cloud Foundation and First Data Ingestion
+### !1. Cloud Foundation and First Data Ingestion
 
 - Create and configure the GitHub repository.
 - Confirm Azure subscription capabilities, permissions, region, and spending limits.
@@ -395,55 +343,55 @@ ontario-electricity-lakehouse/
 - Verify that an actual IESO report is archived in Azure Storage.
 - Confirm that rerunning the collector does not create an unnecessary duplicate archive.
 
-### M2. Reliable Source Ingestion
+### !2. Reliable Source Ingestion
 
 - Define source-specific schemas and ingestion contracts.
 - Implement source version detection, hashes, and a durable manifest.
 - Add retry handling, validation, source reconciliation, and historical backfill.
 - Test missing, duplicate, and corrected IESO reports.
 
-### M3. Kafka-Compatible Streaming
+### !3. Kafka-Compatible Streaming
 
 - Provision Azure Event Hubs Standard and Kafka endpoints.
 - Configure the Python producer to publish normalized source observations.
 - Create topic/event-hub naming, message keys, and schemas.
 - Test Kafka-compatible delivery acknowledgements, duplicates, and replay.
 
-### M4. Databricks Bronze and Silver
+### !4. Databricks Bronze and Silver
 
 - Create Azure Databricks with Unity Catalog and GitHub integration.
 - Connect Structured Streaming to Event Hubs using the Kafka source.
 - Implement Bronze ingestion, Delta checkpoints, and Silver validation.
 - Test incremental processing, duplicate handling, and corrected values.
 
-### M5. Gold SQL Modelling
+### !5. Gold SQL Modelling
 
 - Finalize dimension and fact table grains and join keys.
 - Create business-ready Delta tables using SQL and PySpark.
 - Develop market-overview and volatility analytical marts.
 - Validate analytical outputs against source reports.
 
-### M6. Additional IESO Sources
+### !6. Additional IESO Sources
 
 - Add day-ahead pricing and generator output/capability feeds.
 - Integrate historical backfill data where needed.
 - Create hourly price-spread and generation analytical views.
 
-### M7. Full Orchestration and Operations
+### !7. Full Orchestration and Operations
 
 - Configure ADF schedules, dependencies, retries, and Databricks Job activity.
 - Implement monitoring, reconciliation, and recovery workflows.
 - Test multiple unattended cycles and failure scenarios.
 - Measure performance, data freshness, and cost.
 
-### M8. Power BI Dashboard
+### !8. Power BI Dashboard
 
 - Connect Power BI to Gold analytical tables.
 - Build market, pricing, generation, and platform-health report pages.
 - Validate calculated KPIs and reporting freshness.
 - Prepare dashboard screenshots and demonstration material.
 
-### M9. CI/CD and Portfolio Release
+### !9. CI/CD and Portfolio Release
 
 - Implement GitHub Actions checks and deployment workflows.
 - Version-control Databricks Bundles, ADF definitions, and cloud resource configurations.
@@ -451,7 +399,7 @@ ontario-electricity-lakehouse/
 - Publish actual benchmark results and project limitations.
 - Prepare a reproducible demonstration of the complete pipeline.
 
-## 10. Expected Deliverables
+## !10. Expected Deliverables
 
 - Cloud-hosted ingestion of real, regularly updated Ontario electricity market reports.
 - Kafka-compatible data streaming from Python into Azure Event Hubs.
@@ -475,18 +423,3 @@ ontario-electricity-lakehouse/
 - [Databricks Declarative Automation Bundles examples](https://github.com/databricks/bundle-examples)
 - [gridstatus IESO Python implementation](https://github.com/gridstatus/gridstatus)
 - [GridGPT IESO streaming reference](https://github.com/kaustav927/GridGPT)
-
-### Data Usage Notes
-
-- All electricity market data originates from IESO, not from this repository.
-- This project is independent of IESO and is not endorsed by IESO.
-- Any stored examples or redistributed source content must comply with the IESO Terms of Use and applicable report-specific conditions.
-- The project will not publish private cloud credentials, bulk source archives, or confidential market-participant data.
-
-## 12. Project Limitations
-
-- The architecture is planned and the full Azure pipeline has not yet been deployed.
-- The current source validation consists of a successful manual CSV download; recurring cloud collection remains to be implemented and tested.
-- Exact report schemas, real file-update latency, monthly cloud cost, and performance metrics are not yet measured.
-- Azure Event Hubs supports Kafka-compatible producer and consumer APIs but is not a self-managed Apache Kafka cluster.
-- Power BI report freshness will depend on the completed Databricks pipeline and the chosen refresh/query mode.
