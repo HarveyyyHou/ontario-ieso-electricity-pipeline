@@ -1,0 +1,15 @@
+{
+	"name": "adf-ieso-dev-024ed7af",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "canadacentral",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "88fe07e2-78ae-4934-9930-ca510c1a8160",
+		"tenantId": "44376307-b429-42ad-8c25-28cd496f4772"
+	}
+}
