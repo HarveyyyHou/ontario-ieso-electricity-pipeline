@@ -1,0 +1,19 @@
+{
+	"name": "ls_ieso_ingest_function",
+	"properties": {
+		"annotations": [],
+		"type": "AzureFunction",
+		"typeProperties": {
+			"functionAppUrl": "https://func-ieso-ingest-dev-024ed7af.azurewebsites.net",
+			"authentication": "Anonymous",
+			"functionKey": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_ieso_keyvault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "ieso-ingest-function-key"
+			}
+		}
+	}
+}
