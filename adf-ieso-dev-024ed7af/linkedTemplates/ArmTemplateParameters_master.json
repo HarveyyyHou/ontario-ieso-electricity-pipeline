@@ -1,0 +1,21 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "adf-ieso-dev-024ed7af"
+		},
+		"ls_ieso_ingest_function_properties_typeProperties_functionAppUrl": {
+			"value": "https://func-ieso-ingest-dev-024ed7af.azurewebsites.net"
+		},
+		"ls_ieso_keyvault_properties_typeProperties_baseUrl": {
+			"value": "https://kv-ieso-dev-024ed7af.vault.azure.net/"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}
