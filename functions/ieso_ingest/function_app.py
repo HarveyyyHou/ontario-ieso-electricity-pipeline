@@ -27,7 +27,7 @@ def collect_ieso(req: func.HttpRequest) -> func.HttpResponse:
     try:
         account = os.environ["IESO_STORAGE_ACCOUNT"]
         container = os.environ["IESO_RAW_CONTAINER"]
-        table_name = os.environ["IESO_MANIFEST_TABLE"]
+        table_name = os.environ["IESO_TABLE"]
         adf_run_id = req.headers.get("x-adf-run-id", "")
         if adf_run_id and not re.fullmatch(r"[A-Za-z0-9-]{1,80}", adf_run_id):
             raise ValueError("Invalid x-adf-run-id")
