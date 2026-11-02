@@ -17,10 +17,15 @@
 				"typeProperties": {
 					"functionName": "collect_ieso",
 					"body": {
-						"source": "rt_lmp"
+						"value": "@concat('{\"source\":\"rt_lmp\",\"report_file\":\"', pipeline().parameters.report_file, '\"}')",
+						"type": "Expression"
 					},
 					"headers": {
-						"Content-Type": "application/json"
+						"Content-Type": "application/json",
+						"x-adf-run-id": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
 					},
 					"method": "POST"
 				},
@@ -28,8 +33,45 @@
 					"referenceName": "ls_ieso_ingest_function",
 					"type": "LinkedServiceReference"
 				}
+			},
+			{
+				"name": "if_rt_lmp_accepted",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "act_collect_rt_lmp",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('act_collect_rt_lmp').output.validation_status, 'accepted')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "fail_rt_lmp_not_accepted",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "IESO real time LMP ingestion did not return an accepted status.",
+								"errorCode": "IESO_INGEST_NOT_ACCEPTED"
+							}
+						}
+					]
+				}
 			}
 		],
+		"parameters": {
+			"report_file": {
+				"type": "string",
+				"defaultValue": "PUB_RealtimeEnergyLMP.csv"
+			}
+		},
 		"annotations": []
 	}
 }
