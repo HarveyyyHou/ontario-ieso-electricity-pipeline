@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv*/
+.python_packages/
+local.settings.json
+*.zip
+.env
+evidence/

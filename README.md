@@ -4,13 +4,14 @@
 
 This project aims to develop a data engineering pipeline that collects, processes, and analyzes regularly updated electricity market data published by the Independent Electricity System Operator (IESO) in Ontario, Canada. The platform is designed to integrate Azure Data Factory, Azure Functions, Kafka compatible Azure Event Hubs, Azure Databricks, PySpark, Spark SQL, Delta Lake, and Power BI into an automated data workflow.
 
-The project focuses on data engineering rather than price forecasting or machine learning. Its main goal is to make public electricity market information reliable, traceable, and accessible for data analysis or general users and stakeholders.
+The project focuses on data engineering. Its main goal is to make public electricity market information reliable, traceable, and accessible for data analysis for general users and stakeholders.
 
 ### Project Status
 
-- Current stage: Project planning and source access validation.
-- Verified that the IESO Real-Time Energy LMP report can be downloaded through Python using an unauthenticated HTTPS request.
-- Verified test result: HTTP 200; a CSV file of 488,964 bytes was downloaded in approximately 1.1 seconds during a local test.
+- Milestone 1 completed and verified: manual ADF `pl_ieso_datacollect` calls `collect_ieso`, archives an IESO report in private ADLS raw storage, and identifies an identical rerun as `already_archived`.
+- Milestone 2 implementation is under review: complete-file LMP validation, an Azure Table ingestion manifest, quarantine, replay, and bounded reconciliation. Azure deployment and live verification are pending until the runbook checks pass.
+- Dataset sequence: harden real-time LMP, add Real-Time Totals / Ontario Demand before Kafka, then add day-ahead LMP and generator output/capability in Milestone 6.
+- No scheduled ingestion or CI/CD deployment is enabled by this batch.
 
 ## 1. Business Problem and Objectives
 
@@ -123,8 +124,6 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 ### 3.1 Real-Time Energy LMP (CSV)
 
 - Official report: Real-time 5-min Energy LMP Report.
-- URL: https://reports-public.ieso.ca/public/RealtimeEnergyLMP/PUB_RealtimeEnergyLMP.csv
-- Archive directory: https://reports-public.ieso.ca/public/RealtimeEnergyLMP/
 - Format: CSV.
 - Reporting interval: Five minutes, after successful real-time market calculations.
 - Report coverage: Generator and load pricing locations in the IESO-administered market.
@@ -138,12 +137,10 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 
 - Official report: Real-time Totals Report (Ontario and Market Demand).
 - Latest CSV file: `PUB_RealtimeTotals.csv`
-- URL: https://reports-public.ieso.ca/public/RealtimeTotals/PUB_RealtimeTotals.csv
-- Archive directory: https://reports-public.ieso.ca/public/RealtimeTotals/
 - Format: CSV or XML; initial implementation will use CSV.
 - Reporting interval: Five minutes.
 - What the data represents:
-  - Ontario electricity demand.
+  - Ontario Demand forecast used by the real-time calculation engine for the upcoming five-minute interval.
   - Total energy scheduled in the IESO-administered market.
   - System losses, load, and scheduled operating-reserve quantities where provided by the report.
   - Delivery date, hour, interval, and associated system-level measurements.
@@ -152,8 +149,6 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 
 - Official report: Day-ahead Hourly Energy LMP Report.
 - Latest file: `PUB_DAHourlyEnergyLMP.csv`
-- URL: https://reports-public.ieso.ca/public/DAHourlyEnergyLMP/PUB_DAHourlyEnergyLMP.csv
-- Archive directory: https://reports-public.ieso.ca/public/DAHourlyEnergyLMP/
 - Format: CSV.
 - Reporting interval: One hour for the delivery day.
 - Publication: Day-ahead market results; generally a daily report rather than a new report every five minutes.
@@ -166,8 +161,6 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 
 - Official report: Generator Output and Capability Report.
 - Latest file: `PUB_GenOutputCapability.xml`
-- URL: https://reports-public.ieso.ca/public/GenOutputCapability/PUB_GenOutputCapability.xml
-- Archive directory: https://reports-public.ieso.ca/public/GenOutputCapability/
 - Format: XML for the current operational report, not CSV.
 - Reporting interval: Hourly output and capability measurements.
 - Coverage: Generating facilities participating in the IESO-administered market with maximum output capability of at least 20 MW.
@@ -182,8 +175,6 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 
 - Official report: Monthly Generator Output and Capability Data.
 - Latest CSV file: `PUB_GenOutputCapabilityMonth.csv`
-- URL: https://reports-public.ieso.ca/public/GenOutputCapabilityMonth/PUB_GenOutputCapabilityMonth.csv
-- Archive directory: https://reports-public.ieso.ca/public/GenOutputCapabilityMonth/
 - Format: CSV.
 - Historical coverage: Monthly report files from May 2019 onward, as listed by IESO.
 - What the data represents:
@@ -192,7 +183,6 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 
 ### 3.6 Historical Ontario and Market Demand (CSV) (Backup)
 - Official report: Historical hourly Ontario and Market Demand.
-- Report directory: https://reports-public.ieso.ca/public/Demand/
 - Format: CSV.
 - Historical coverage: IESO lists annual hourly demand files from 2002 onward.
 - What the data represents:
@@ -253,7 +243,7 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 - ADF invokes Databricks Jobs to run the Bronze, Silver, and Gold processing workflow.
 - Databricks Jobs manage Spark task dependencies but do not maintain a second, competing production schedule.
 - Planned ADF pipelines:
-  - `pl_ieso_collect`: Scheduled ingestion of real-time reports.
+  - `pl_ieso_datacollect`: Existing collection pipeline; scheduling remains planned.
   - `pl_databricks_processing`: Incremental Event Hubs-to-Gold processing.
   - `pl_ieso_reconciliation`: Scheduled checks for missed or revised source reports.
 - Proposed initial timing:
@@ -291,7 +281,6 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 ## 8. Development and Version Control
 
 - Primary development environment: Azure and Azure Databricks.
-- Source of truth: GitHub repository.
 - Azure Data Factory pipelines: GitHub integration for version controlled definitions.
 - Databricks development: Git folders connected to the repository.
 - Azure Functions: Python source code deployed from GitHub.
@@ -415,11 +404,7 @@ ontario-electricity-lakehouse/
 - [IESO Data Directory](https://www.ieso.ca/en/power-data/data-directory)
 - [IESO Public Reports Repository](https://reports-public.ieso.ca/public/)
 - [IESO Terms of Use](https://www.ieso.ca/terms-of-use)
-- [IESO Market Renewal launch, May 1, 2025](https://www.ieso.ca/en/Sector-Participants/IESO-News/2025/05/The-Launch-of-the-Renewed-Market-is-Currently-Underway)
 - [Azure Event Hubs for Kafka examples](https://github.com/Azure/azure-event-hubs-for-kafka)
 - [Azure Data Factory Azure Function activity](https://learn.microsoft.com/en-us/azure/data-factory/control-flow-azure-function-activity)
 - [Azure Data Factory Databricks Job activity](https://learn.microsoft.com/en-us/azure/data-factory/transform-data-databricks-job)
 - [Azure Databricks Kafka streaming source](https://learn.microsoft.com/en-us/azure/databricks/structured-streaming/streaming-event-hubs)
-- [Databricks Declarative Automation Bundles examples](https://github.com/databricks/bundle-examples)
-- [gridstatus IESO Python implementation](https://github.com/gridstatus/gridstatus)
-- [GridGPT IESO streaming reference](https://github.com/kaustav927/GridGPT)

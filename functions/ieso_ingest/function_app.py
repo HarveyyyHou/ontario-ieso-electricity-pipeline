@@ -1,109 +1,18 @@
-import csv
-import hashlib
-import io
 import json
 import logging
 import os
-from datetime import datetime, timezone
+import re
+from contextlib import ExitStack
 
 import azure.functions as func
-import requests
-from azure.core.exceptions import ResourceExistsError
+from azure.data.tables import TableClient
 from azure.identity import ManagedIdentityCredential
-from azure.storage.blob import BlobServiceClient, ContentSettings
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from azure.storage.blob import BlobServiceClient
+
+from collector import BlobArchive, Manifest, collect, request_options
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
-
-SOURCE_URL = (
-    "https://reports-public.ieso.ca/public/RealtimeEnergyLMP/"
-    "PUB_RealtimeEnergyLMP.csv"
-)
-
-EXPECTED_HEADER = [
-    "Delivery Hour",
-    "Interval",
-    "Pricing Location",
-    "LMP",
-    "Energy Loss Price",
-    "Energy Congestion Price",
-]
-
-
-def validate_report(content):
-    rows = csv.reader(io.StringIO(content.decode("utf-8-sig")))
-    preamble = next(rows, [])
-    header = next(rows, [])
-    first_row = next(rows, [])
-
-    if (
-        not preamble
-        or not preamble[0].startswith("CREATED AT ")
-        or header != EXPECTED_HEADER
-        or len(first_row) != len(EXPECTED_HEADER)
-    ):
-        raise ValueError("Unexpected or empty IESO real-time LMP report")
-
-
-def archive_report(content, headers, retrieved_at):
-    account = os.environ["IESO_STORAGE_ACCOUNT"]
-    container = os.environ["IESO_RAW_CONTAINER"]
-
-    digest = hashlib.sha256(content).hexdigest()
-    blob_name = (
-        f"ieso/rt_lmp/sha256={digest}/PUB_RealtimeEnergyLMP.csv"
-    )
-
-    metadata = {
-        "source": "rt_lmp",
-        "source_url": SOURCE_URL,
-        "sha256": digest,
-        "retrieved_at_utc": retrieved_at,
-    }
-
-    for header, key in [
-        ("ETag", "source_etag"),
-        ("Last-Modified", "source_last_modified"),
-    ]:
-        if headers.get(header):
-            metadata[key] = headers[header]
-
-    with ManagedIdentityCredential() as credential:
-        with BlobServiceClient(
-            account_url=f"https://{account}.blob.core.windows.net",
-            credential=credential,
-            retry_total=2,
-            connection_timeout=5,
-            read_timeout=20,
-        ) as storage:
-            blob = storage.get_blob_client(
-                container=container,
-                blob=blob_name,
-            )
-
-            try:
-                blob.upload_blob(
-                    content,
-                    overwrite=False,
-                    metadata=metadata,
-                    content_settings=ContentSettings(
-                        content_type="text/csv"
-                    ),
-                )
-                status = "archived"
-            except ResourceExistsError:
-                status = "already_archived"
-
-    return {
-        "status": status,
-        "source": "rt_lmp",
-        "container": container,
-        "blob_name": blob_name,
-        "sha256": digest,
-        "bytes": len(content),
-        "retrieved_at_utc": retrieved_at,
-    }
+logging.getLogger("azure").setLevel(logging.WARNING)
 
 
 @app.function_name(name="collect_ieso")
@@ -111,82 +20,33 @@ def archive_report(content, headers, retrieved_at):
 def collect_ieso(req: func.HttpRequest) -> func.HttpResponse:
     try:
         body = req.get_json()
-    except ValueError:
-        body = None
-
-    if not isinstance(body, dict) or body.get("source") != "rt_lmp":
-        return func.HttpResponse(
-            json.dumps({
-                "error": "Send a JSON object with source set to rt_lmp"
-            }),
-            status_code=400,
-            mimetype="application/json",
-        )
-
+        request_options(body)
+    except (ValueError, TypeError) as exc:
+        return func.HttpResponse(json.dumps({"status": "failed", "stage": "request", "error": str(exc)}),
+                                 status_code=400, mimetype="application/json")
     try:
-        retry = Retry(
-            total=2,
-            backoff_factor=1,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["GET"],
-            respect_retry_after_header=False,
-        )
-
-        with requests.Session() as session:
-            session.mount(
-                "https://",
-                HTTPAdapter(max_retries=retry),
-            )
-            response = session.get(
-                SOURCE_URL,
-                timeout=(5, 20),
-            )
-            response.raise_for_status()
-            content = response.content
-            headers = response.headers
-
-        validate_report(content)
-
-    except (requests.RequestException, ValueError) as exc:
-        logging.exception(
-            "IESO source retrieval or format validation failed"
-        )
-        return func.HttpResponse(
-            json.dumps({
-                "error": str(exc),
-                "stage": "source",
-            }),
-            status_code=502,
-            mimetype="application/json",
-        )
-
-    try:
-        result = archive_report(
-            content,
-            headers,
-            datetime.now(timezone.utc).isoformat(),
-        )
-
-        logging.info(
-            "IESO collection result: %s",
-            json.dumps(result),
-        )
-
-        return func.HttpResponse(
-            json.dumps(result),
-            mimetype="application/json",
-        )
-
+        account = os.environ["IESO_STORAGE_ACCOUNT"]
+        container = os.environ["IESO_RAW_CONTAINER"]
+        table_name = os.environ["IESO_MANIFEST_TABLE"]
+        adf_run_id = req.headers.get("x-adf-run-id", "")
+        if adf_run_id and not re.fullmatch(r"[A-Za-z0-9-]{1,80}", adf_run_id):
+            raise ValueError("Invalid x-adf-run-id")
+        with ExitStack() as stack:
+            credential = stack.enter_context(ManagedIdentityCredential())
+            blobs = stack.enter_context(BlobServiceClient(
+                account_url=f"https://{account}.blob.core.windows.net", credential=credential,
+                retry_total=1, initial_backoff=1, increment_base=1, random_jitter_range=0,
+                connection_timeout=5, read_timeout=10))
+            table = stack.enter_context(TableClient(
+                endpoint=f"https://{account}.table.core.windows.net", table_name=table_name,
+                credential=credential, retry_total=1, retry_backoff_factor=1,
+                connection_timeout=5, read_timeout=10))
+            result, code = collect(body, BlobArchive(blobs.get_container_client(container)),
+                                   Manifest(table), adf_run_id=adf_run_id)
+            result["container"] = container
+        return func.HttpResponse(json.dumps(result), status_code=code, mimetype="application/json")
     except Exception:
-        logging.exception("IESO raw archive write failed")
-
-        return func.HttpResponse(
-            json.dumps({
-                "error": (
-                    "Archive write failed; inspect Application Insights"
-                ),
-                "stage": "storage",
-            }),
-            status_code=500,
-            mimetype="application/json",
-        )
+        logging.exception("ieso_configuration_or_client_failure")
+        return func.HttpResponse(json.dumps({"status": "failed", "stage": "configuration",
+                                             "error": "Inspect Function settings, identity permissions, and Application Insights"}),
+                                 status_code=500, mimetype="application/json")
