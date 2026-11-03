@@ -125,6 +125,69 @@
 								}
 							]
 						}
+					},
+					{
+						"name": "act_collect_rt_totals",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.10:00:00",
+							"retry": 2,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"rt_totals\",\"report_file\":\"', pipeline().parameters.totals_report_file, '\"}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "if_rt_totals_accepted",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "act_collect_rt_totals",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@equals(activity('act_collect_rt_totals').output.validation_status, 'accepted')",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "fail_rt_totals_not_accepted",
+									"type": "Fail",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"message": "IESO Real-Time Totals CSV/XML pair was not accepted. Inspect act_collect_rt_totals output and ingestion records.",
+										"errorCode": "IESO_TOTALS_NOT_ACCEPTED"
+									}
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -134,6 +197,10 @@
 					"report_file": {
 						"type": "string",
 						"defaultValue": "PUB_RealtimeEnergyLMP.csv"
+					},
+					"totals_report_file": {
+						"type": "string",
+						"defaultValue": "PUB_RealtimeTotals.csv"
 					}
 				},
 				"annotations": []
