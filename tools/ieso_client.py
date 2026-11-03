@@ -14,6 +14,8 @@ from urllib.parse import unquote, urlparse
 import requests
 
 DIRECTORY = "https://reports-public.ieso.ca/public/RealtimeEnergyLMP/"
+SOURCES = {"rt_lmp": (DIRECTORY, "PUB_RealtimeEnergyLMP"),
+           "rt_totals": ("https://reports-public.ieso.ca/public/RealtimeTotals/", "PUB_RealtimeTotals")}
 FUNCTION_URL = "https://func-ieso-ingest-dev-024ed7af.azurewebsites.net/api/collect_ieso"
 
 
@@ -29,15 +31,16 @@ class Links(HTMLParser):
                     self.names.add(unquote(urlparse(value).path.rsplit("/", 1)[-1]))
 
 
-def inventory(date, hour, maximum=20):
+def inventory(date, hour, maximum=20, source="rt_lmp"):
     parsed = datetime.strptime(date, "%Y-%m-%d")
     if not 1 <= hour <= 24:
         raise ValueError("Delivery hour must be 1 through 24")
-    prefix = f"PUB_RealtimeEnergyLMP_{parsed:%Y%m%d}{hour:02d}"
+    directory, basename = SOURCES[source]
+    prefix = f"{basename}_{parsed:%Y%m%d}{hour:02d}"
     pattern = re.compile(re.escape(prefix) + r"(?:_v(\d+))?\.csv\Z")
     for attempt in range(2):
         try:
-            response = requests.get(DIRECTORY, timeout=(10, 30))
+            response = requests.get(directory, timeout=(10, 30))
             response.raise_for_status()
             break
         except requests.RequestException:
@@ -47,6 +50,10 @@ def inventory(date, hour, maximum=20):
     parser = Links()
     parser.feed(response.text)
     names = [name for name in parser.names if pattern.fullmatch(name)]
+    if source == "rt_totals":
+        missing = [name[:-4] + ".xml" for name in names if name[:-4] + ".xml" not in parser.names]
+        if missing:
+            raise ValueError("CSV files have missing XML counterparts: " + ", ".join(sorted(missing)))
     names.sort(key=lambda name: (pattern.fullmatch(name)[1] is not None,
                                  int(pattern.fullmatch(name)[1] or 0)))
     if not names:
@@ -78,21 +85,41 @@ def main(argv=None):
     mode = one.add_mutually_exclusive_group()
     mode.add_argument("--report-file")
     mode.add_argument("--archive-sha256")
+    one.add_argument("--source", choices=SOURCES, default="rt_lmp")
+    one.add_argument("--csv-sha256")
+    one.add_argument("--xml-sha256")
     one.add_argument("--repeat", type=int, choices=range(1, 5), default=1)
     one.add_argument("--parallel", action="store_true")
     one.add_argument("--output", required=True)
     rec = sub.add_parser("reconcile", help="Inventory one source hour; --apply collects each available version")
+    rec.add_argument("--source", choices=SOURCES, default="rt_lmp")
     rec.add_argument("--date", required=True)
     rec.add_argument("--hour", type=int, required=True)
     rec.add_argument("--max-files", type=int, choices=range(1, 51), default=20)
     rec.add_argument("--apply", action="store_true")
     rec.add_argument("--output", required=True)
+    verify = sub.add_parser("verify-files", help="Check downloaded original CSV/XML against prepared CSV")
+    verify.add_argument("--csv", required=True)
+    verify.add_argument("--xml", required=True)
+    verify.add_argument("--prepared", required=True)
+    verify.add_argument("--output", required=True)
     args = parser.parse_args(argv)
     results = []
     summary = {"command": args.command, "function_url": FUNCTION_URL, "results": results}
     try:
+        if args.command == "verify-files":
+            sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "functions" / "ieso_ingest"))
+            from totals import combine
+            from collector import sha256
+            expected, details, preview = combine(Path(args.csv).read_bytes(), Path(args.xml).read_bytes())
+            actual = Path(args.prepared).read_bytes()
+            summary.update(check_passed=actual == expected, row_count=details["RowCount"],
+                           expected_sha256=sha256(expected), actual_sha256=sha256(actual), preview=preview)
+            print(json.dumps(summary, indent=2), flush=True)
+            return 0 if summary["check_passed"] else 1
+        summary["source"] = args.source
         if args.command == "reconcile":
-            names = inventory(args.date, args.hour, args.max_files)
+            names = inventory(args.date, args.hour, args.max_files, source=args.source)
             summary.update(delivery_date=args.date, delivery_hour=args.hour, available_files=names, applied=args.apply)
             print(json.dumps({k: v for k, v in summary.items() if k != "results"}, indent=2), flush=True)
             if args.apply:
@@ -100,16 +127,22 @@ def main(argv=None):
                 if not key:
                     raise ValueError("Function key was empty")
                 for name in names:
-                    record = invoke({"source": "rt_lmp", "report_file": name}, key)
+                    record = invoke({"source": args.source, "report_file": name}, key)
                     results.append(record)
                     if not accepted(record):
                         break
         else:
-            body = {"source": "rt_lmp"}
+            body = {"source": args.source}
             if args.report_file:
                 body["report_file"] = args.report_file
             if args.archive_sha256:
                 body["archive_sha256"] = args.archive_sha256
+            if args.csv_sha256 or args.xml_sha256:
+                if args.source != "rt_totals" or not args.csv_sha256 or not args.xml_sha256 or args.report_file or args.archive_sha256:
+                    raise ValueError("Totals replay needs --source rt_totals and both hashes, without report-file/archive-sha256")
+                body.update(csv_sha256=args.csv_sha256, xml_sha256=args.xml_sha256)
+            if args.source == "rt_totals" and args.archive_sha256:
+                raise ValueError("Totals replay uses --csv-sha256 and --xml-sha256")
             key = getpass("Paste the Function key named adf (input hidden), then press Enter: ")
             if not key:
                 raise ValueError("Function key was empty")
@@ -126,12 +159,12 @@ def main(argv=None):
         good = len(results) == expected and all(accepted(r) for r in results)
         summary["check_passed"] = good
         if args.command == "collect" and args.repeat > 1 and results:
-            fingerprints = {r["response"].get("sha256") for r in results}
+            fingerprints = {r["response"].get("report_id") or r["response"].get("sha256") for r in results}
             summary["same_report_version"] = len(fingerprints) == 1
-            if args.report_file or args.archive_sha256:
+            if args.report_file or args.archive_sha256 or args.csv_sha256:
                 summary["check_passed"] = good and len(fingerprints) == 1
         return 0 if summary["check_passed"] else 1
-    except (requests.RequestException, ValueError) as exc:
+    except (requests.RequestException, ValueError, OSError) as exc:
         summary.update(check_passed=False, error=str(exc))
         print(f"STOP: {exc}", file=sys.stderr)
         return 1

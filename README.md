@@ -10,8 +10,9 @@ The project focuses on data engineering. Its main goal is to make public electri
 
 - Milestone 1 completed and verified: manual ADF `pl_ieso_datacollect` calls `collect_ieso`, archives an IESO report in private ADLS raw storage, and identifies an identical rerun as `already_archived`.
 - Milestone 2 completed and verified for real-time LMP: full-file validation, ingestion records in Azure Table Storage (`iesodev001` / `iesoingestion`), quarantine, replay, duplicate handling, and bounded historical reconciliation.
-Application Insights logging and failure investigation verified. The Function uses `IESO_TABLE`. The earlier configuration error was corrected, and the deliberate missing-report test produced the expected failed ingestion record, correlated with the Function logs.
-- Dataset sequence: harden real-time LMP, add Real-Time Totals / Ontario Demand before Kafka, then add day-ahead LMP and generator output/capability in Milestone 6.
+- Application Insights logging and failure investigation verified. The Function uses `IESO_TABLE`. The earlier configuration error was corrected, and the deliberate missing-report test produced the expected failed ingestion record, correlated with the Function logs.
+- Real-Time Totals CSV/XML collection and a prepared CSV containing Ontario Demand are implemented in the current development batch; live Azure verification is pending.
+- Dataset sequence: verify the Real-Time Totals prepared CSV, then add Kafka/Event Hubs; day-ahead LMP and generator output/capability remain Milestone 6.
 - No scheduled ingestion or CI/CD deployment is enabled by this batch.
 
 ## 1. Business Problem and Objectives
@@ -138,13 +139,30 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 
 - Official report: Real-time Totals Report (Ontario and Market Demand).
 - Latest CSV file: `PUB_RealtimeTotals.csv`
-- Format: CSV or XML; initial implementation will use CSV.
+- Source formats: collect both the original CSV and its matching XML report. The XML supplies the explicit Ontario Demand quantity absent from the inspected CSV.
+- Downstream input: a prepared UTF-8 CSV containing the CSV measurements, a DELIVERY DATE column, and ONTARIO DEMAND from XML.
 - Reporting interval: Five minutes.
 - What the data represents:
   - Ontario Demand forecast used by the real-time calculation engine for the upcoming five-minute interval.
   - Total energy scheduled in the IESO-administered market.
   - System losses, load, and scheduled operating-reserve quantities where provided by the report.
   - Delivery date, hour, interval, and associated system-level measurements.
+
+#### Real-Time Totals collection and prepared CSV
+
+- Keep using Function `collect_ieso`, existing private container `raw`, and table `iesoingestion` selected by `IESO_TABLE`. Source identifier: `rt_totals`.
+- A request with `source=rt_totals` and `report_file=PUB_RealtimeTotals.csv` fetches that CSV plus `PUB_RealtimeTotals.xml`. Dated CSV filenames fetch the XML with the same basename. URLs and filesystem paths are not accepted as report filenames.
+- Join on delivery date, delivery hour, and five-minute interval. Both files must have exactly one record per key and identical key sets. All seven shared numeric quantities and the flag must agree. Creation timestamps are retained but need not be identical, because IESO generates the files separately.
+- Preserve each original file by its byte hash under `raw/ieso/rt_totals/original/csv/` or `raw/ieso/rt_totals/original/xml/`.
+- Write validated downstream CSVs under `raw/ieso/rt_totals/prepared/sha256=<output-hash>/PUB_RealtimeTotals_with_OntarioDemand.csv`. Original and prepared data are separated by prefixes inside the existing container. The prepared file has one header row, ISO delivery dates, and decimal values without changing their numeric meaning.
+- The CSV retains its original measurement columns and flag, adds DELIVERY DATE from the report metadata, and adds ONTARIO DEMAND from XML. All quantities are in MW. Total Load is not substituted for Ontario Demand. LMP remains a separate dataset at pricing-location grain.
+- Report rows use table PartitionKey `rt_totals_v1`; RowKey is a report-pair ID derived from both source byte hashes and the transformation version. A corrected XML demand value is processed even if the CSV bytes did not change. Prepared CSVs are themselves addressed by byte hash, so identical prepared bytes are reused.
+- Attempt rows use `attempt_rt_totals_YYYYMMDD` with a unique RunId. Rows retain both source hashes/paths, prepared CSV hash/path, validation, outcome, and ADF run correlation. Existing LMP rows and paths are retained.
+- Source files remain archived if validation fails. Rejected or mismatched pairs have no prepared output. An accepted source pair is required before downstream use. Mismatches return a deferred result so independently updated latest files cannot be silently mixed.
+- Replay an archived pair with `source=rt_totals`, `csv_sha256`, and `xml_sha256`. This rebuilds the prepared CSV from immutable originals without downloading IESO again. It repairs interruption after original upload or prepared upload. If only one original was archived, recollect the dated source pair when still available.
+- The client supports `collect --source rt_totals`, `reconcile --source rt_totals`, and `verify-files` for checking downloaded original CSV/XML against prepared CSV. Reconciliation checks that every listed CSV has an XML counterpart and processes one hour without silently truncating its inventory.
+- Increment the transformation version when changing the output or matching rules. Event publication, scheduling, Databricks, and CI/CD remain later work. ADF runs independent LMP and Totals activities with acceptance gates in `pl_ieso_datacollect`.
+- Source definitions: https://reports-public.ieso.ca/docrefs/helpfile/RealtimeTotals_h1.pdf . Ontario Demand represents the operational forecast used by the real-time engine for the upcoming interval: https://ieso.ca/Sector-Participants/Market-Operations/Markets-and-Related-Programs/Demand-Forecasts .
 
 ### 3.3 Day-Ahead Hourly Energy LMP (CSV) - Full Version
 

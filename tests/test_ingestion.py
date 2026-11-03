@@ -134,14 +134,14 @@ class RecoveryTests(unittest.TestCase):
     def setUp(self):
         logging.disable(logging.CRITICAL)
         self.table, self.archive = Table(), Archive()
-        self.manifest = c.Manifest(self.table)
+        self.records = c.IngestionRecords(self.table)
         self.bytes = report()
 
     def tearDown(self): logging.disable(logging.NOTSET)
 
     def collect(self, content=None, **kwargs):
         data = content if content is not None else self.bytes
-        return c.collect({"source":"rt_lmp"}, self.archive, self.manifest,
+        return c.collect({"source":"rt_lmp"}, self.archive, self.records,
                          downloader=lambda *_: (data, {}), **kwargs)
 
     def test_repeated_download_one_blob_and_report_two_attempts(self):
@@ -168,7 +168,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertIn("/quarantine/", outcome["blob_name"])
 
     def test_failure_after_blob_write_resumes(self):
-        with patch.object(self.manifest, "record_report", side_effect=RuntimeError("table unavailable")):
+        with patch.object(self.records, "record_report", side_effect=RuntimeError("table unavailable")):
             outcome, status = self.collect()
         self.assertEqual(status, 500)
         self.assertEqual(len(self.archive.data), 1)
@@ -180,19 +180,19 @@ class RecoveryTests(unittest.TestCase):
     def test_archive_replay_does_not_contact_ieso(self):
         outcome, _ = self.collect()
         result, code = c.collect({"source":"rt_lmp","archive_sha256":outcome["sha256"]},
-                                 self.archive, self.manifest, downloader=lambda *_: self.fail("HTTP used"))
+                                 self.archive, self.records, downloader=lambda *_: self.fail("HTTP used"))
         self.assertEqual(code, 200)
         self.assertEqual(result["status"], "already_archived")
 
     def test_source_404_is_durable_failed_attempt(self):
         def missing(*_): raise c.SourceError("not found", 404)
-        outcome, status = c.collect({"source":"rt_lmp"},self.archive,self.manifest,downloader=missing)
+        outcome, status = c.collect({"source":"rt_lmp"},self.archive,self.records,downloader=missing)
         self.assertEqual((status,outcome["source_http_status"]), (502,404))
         self.assertEqual(next(iter(self.table.rows.values()))[0]["Outcome"], "failed")
 
     def test_long_source_wait_returns_a_gateable_deferred_result(self):
         def wait(*_): raise c.DeferredSource(429, 600)
-        outcome, status = c.collect({"source":"rt_lmp"},self.archive,self.manifest,downloader=wait)
+        outcome, status = c.collect({"source":"rt_lmp"},self.archive,self.records,downloader=wait)
         self.assertEqual((status,outcome["status"],outcome["validation_status"]),(200,"deferred","not_checked"))
         self.assertEqual(outcome["retry_after_seconds"],600)
         self.assertFalse(self.archive.data)
@@ -217,7 +217,7 @@ class RecoveryTests(unittest.TestCase):
         key = c.CONTRACT, result["sha256"]
         current = copy.deepcopy(self.table.rows[key][0])
         current["LastSeenUtc"] = "2000-01-01T00:00:00+00:00"
-        self.manifest.record_report(current)
+        self.records.record_report(current)
         self.assertNotEqual(self.table.rows[key][0]["LastSeenUtc"], current["LastSeenUtc"])
 
 
@@ -285,7 +285,7 @@ class ArchiveAndHttpTests(unittest.TestCase):
         import function_app
         req=func.HttpRequest(method="POST",url="https://example/api/collect_ieso",body=b'{"source":"rt_lmp"}',
                              headers={"x-adf-run-id":"test-run"})
-        with patch.dict("os.environ",{"IESO_STORAGE_ACCOUNT":"iesodev001","IESO_RAW_CONTAINER":"raw","IESO_MANIFEST_TABLE":"iesoingestionmanifest"}), \
+        with patch.dict("os.environ",{"IESO_STORAGE_ACCOUNT":"iesodev001","IESO_RAW_CONTAINER":"raw","IESO_TABLE":"iesoingestion"}), \
              patch.object(function_app,"ManagedIdentityCredential"), \
              patch.object(function_app,"BlobServiceClient"), \
              patch.object(function_app,"TableClient"), \

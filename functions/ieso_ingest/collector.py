@@ -161,7 +161,10 @@ def retry_delay(value):
 
 
 def fetch_report(report_file, deadline, session_factory=requests.Session, sleep=time.sleep):
-    url = BASE_URL + validate_filename(report_file)
+    return fetch_url(BASE_URL + validate_filename(report_file), deadline, session_factory, sleep)
+
+
+def fetch_url(url, deadline, session_factory=requests.Session, sleep=time.sleep):
     with session_factory() as session:
         for attempt in range(2):
             check_budget(deadline)
@@ -194,16 +197,18 @@ def fetch_report(report_file, deadline, session_factory=requests.Session, sleep=
     raise SourceError("IESO download did not complete")
 
 
-class Manifest:
-    def __init__(self, table):
+class IngestionRecords:
+    def __init__(self, table, source="rt_lmp", contract=None):
         self.table = table
+        self.source = source
+        self.contract = contract or source + "_v1"
         self.deadline = float("inf")
 
     def start_attempt(self, run_id, requested, now, adf_run_id):
-        entity = {"PartitionKey": "attempt_rt_lmp_" + now[:10].replace("-", ""),
+        entity = {"PartitionKey": "attempt_" + self.source + "_" + now[:10].replace("-", ""),
                   "RowKey": run_id, "RunId": run_id, "RequestedReport": requested,
                   "StartedUtc": now, "Outcome": "started", "Stage": "started",
-                  "AdfRunId": adf_run_id, "ContractVersion": CONTRACT}
+                  "AdfRunId": adf_run_id, "ContractVersion": self.contract, "Source": self.source}
         check_budget(self.deadline)
         self.table.create_entity(entity)
         return entity
@@ -225,7 +230,7 @@ class Manifest:
             check_budget(self.deadline)
             current = self.table.get_entity(entity["PartitionKey"], entity["RowKey"])
             if current["Sha256"] != entity["Sha256"] or current["Bytes"] != entity["Bytes"]:
-                raise RuntimeError("Manifest hash or byte-count conflict")
+                raise RuntimeError("Ingestion record hash or byte-count conflict")
             if current["LastSeenUtc"] >= entity["LastSeenUtc"]:
                 return "existing"
             patch = {"PartitionKey": entity["PartitionKey"], "RowKey": entity["RowKey"],
@@ -239,7 +244,7 @@ class Manifest:
             except HttpResponseError as exc:
                 if exc.status_code != 412:
                     raise
-        raise RuntimeError("Manifest remained busy after four conditional update attempts")
+        raise RuntimeError("Ingestion record remained busy after four conditional update attempts")
 
 
 class BlobArchive:
@@ -247,12 +252,12 @@ class BlobArchive:
         self.container = container
         self.deadline = float("inf")
 
-    def put(self, path, content, metadata):
+    def put(self, path, content, metadata, content_type="text/csv; charset=utf-8"):
         check_budget(self.deadline)
         blob = self.container.get_blob_client(path)
         try:
             blob.upload_blob(content, overwrite=False, metadata=metadata,
-                             content_settings=ContentSettings(content_type="text/csv; charset=utf-8"))
+                             content_settings=ContentSettings(content_type=content_type))
             return "archived"
         except ResourceExistsError:
             check_budget(self.deadline)
@@ -262,8 +267,11 @@ class BlobArchive:
             return "already_archived"
 
     def read(self, digest):
+        return self.read_path(archive_path(digest), digest)
+
+    def read_path(self, path, digest):
         check_budget(self.deadline)
-        blob = self.container.get_blob_client(archive_path(digest))
+        blob = self.container.get_blob_client(path)
         if blob.get_blob_properties().size > MAX_BYTES:
             raise ValueError("Archived file exceeds the 5 MiB replay limit")
         check_budget(self.deadline)
@@ -273,19 +281,19 @@ class BlobArchive:
         return content
 
 
-def collect(body, archive, manifest, downloader=fetch_report, adf_run_id=""):
+def collect(body, archive, records, downloader=fetch_report, adf_run_id=""):
     """One source report per call. Blob and Table writes are deliberately recoverable."""
     report_file, replay_digest = request_options(body)
     run_id, now = str(uuid.uuid4()), utc_now()
     started_monotonic = time.monotonic()
     deadline = started_monotonic + 120
-    archive.deadline = manifest.deadline = deadline
+    archive.deadline = records.deadline = deadline
     result = {"source": "rt_lmp", "run_id": run_id, "adf_run_id": adf_run_id,
               "contract_version": CONTRACT,
               "collection_mode": "http" if report_file else "archive_replay"}
     attempt = None
     try:
-        attempt = manifest.start_attempt(run_id, report_file or "archive:" + replay_digest, now, adf_run_id)
+        attempt = records.start_attempt(run_id, report_file or "archive:" + replay_digest, now, adf_run_id)
         result.update(attempt_partition=attempt["PartitionKey"], attempt_row=run_id)
         result["stage"] = "source" if report_file else "archive_replay"
         if report_file:
@@ -299,7 +307,7 @@ def collect(body, archive, manifest, downloader=fetch_report, adf_run_id=""):
         result["retrieved_at_utc" if report_file else "replayed_at_utc"] = observed_at
         result.update(sha256=digest, bytes=len(content), source_url=source_url,
                       report_file=report_file or LATEST_FILE)
-        manifest.update_attempt(attempt, Stage="downloaded", Sha256=digest, Bytes=len(content),
+        records.update_attempt(attempt, Stage="downloaded", Sha256=digest, Bytes=len(content),
                                 SourceUrl=source_url, SourceHttpStatus=200 if report_file else 0,
                                 ObservedUtc=observed_at)
         result["stage"] = "validation"
@@ -310,7 +318,7 @@ def collect(body, archive, manifest, downloader=fetch_report, adf_run_id=""):
         except ValueError as exc:
             details, accepted, error = {}, False, str(exc)
         path = archive_path(digest) if accepted else f"ieso/quarantine/rt_lmp/sha256={digest}/{LATEST_FILE}"
-        manifest.update_attempt(attempt, Stage="validated", BlobPath=path,
+        records.update_attempt(attempt, Stage="validated", BlobPath=path,
                                 ValidationStatus="accepted" if accepted else "rejected",
                                 ValidationError=error)
         result["stage"] = "archive"
@@ -325,7 +333,7 @@ def collect(body, archive, manifest, downloader=fetch_report, adf_run_id=""):
             if headers.get(source):
                 metadata[target] = headers[source]
         archive_status = archive.put(path, content, metadata)
-        result["stage"] = "manifest"
+        result["stage"] = "records"
         check_budget(deadline)
         entity = {"PartitionKey": CONTRACT, "RowKey": digest, "Sha256": digest,
                   "Bytes": len(content), "BlobPath": path, "SourceUrl": source_url,
@@ -335,27 +343,28 @@ def collect(body, archive, manifest, downloader=fetch_report, adf_run_id=""):
                   "ValidationError": error, "EventPublishStatus": "not_enabled" if accepted else "not_applicable",
                   "SourceEtag": headers.get("etag", ""), "SourceLastModified": headers.get("last-modified", ""),
                   **details}
-        manifest_status = manifest.record_report(entity)
+        manifest_status = records.record_report(entity)
         result.update(status=archive_status if accepted else "rejected", stage="complete",
                       validation_status=entity["ValidationStatus"], validation_error=error,
                       archive_status=archive_status, manifest_status=manifest_status,
                       manifest_partition=CONTRACT, manifest_row=digest, blob_name=path,
+                      records_status=manifest_status, records_partition=CONTRACT, records_row=digest,
                       row_count=details.get("RowCount", 0), report_metadata=details)
         result["duration_ms"] = round((time.monotonic() - started_monotonic) * 1000)
-        manifest.update_attempt(attempt, Stage="complete", Outcome=result["status"],
+        records.update_attempt(attempt, Stage="complete", Outcome=result["status"],
                                 CompletedUtc=utc_now(), RowCount=result["row_count"])
         logging.info("ieso_collection %s", json.dumps(result))
         return result, 200
     except Exception as exc:
         # A failed attempt to persist the audit outcome never conceals the original failure.
-        stage = result.get("stage", "manifest_start")
+        stage = result.get("stage", "records_start")
         if isinstance(exc, DeferredSource):
             logging.warning("ieso_collection_deferred run_id=%s stage=%s wait=%s", run_id, stage, exc.wait)
         else:
             logging.exception("ieso_collection_failed run_id=%s stage=%s sha256=%s", run_id, stage, result.get("sha256", ""))
         if attempt is not None:
             try:
-                manifest.update_attempt(attempt, Outcome="deferred" if isinstance(exc, DeferredSource) else "failed", Stage=stage,
+                records.update_attempt(attempt, Outcome="deferred" if isinstance(exc, DeferredSource) else "failed", Stage=stage,
                                         CompletedUtc=utc_now(), ErrorType=type(exc).__name__,
                                         SourceHttpStatus=(exc.status or 0) if isinstance(exc, SourceError) else attempt.get("SourceHttpStatus", 0))
             except Exception:
