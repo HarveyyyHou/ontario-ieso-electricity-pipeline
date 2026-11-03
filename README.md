@@ -11,7 +11,7 @@ The project focuses on data engineering. Its main goal is to make public electri
 - Milestone 1 completed and verified: manual ADF `pl_ieso_datacollect` calls `collect_ieso`, archives an IESO report in private ADLS raw storage, and identifies an identical rerun as `already_archived`.
 - Milestone 2 completed and verified for real-time LMP: full-file validation, ingestion records in Azure Table Storage (`iesodev001` / `iesoingestion`), quarantine, replay, duplicate handling, and bounded historical reconciliation.
 - Application Insights logging and failure investigation verified. The Function uses `IESO_TABLE`. The earlier configuration error was corrected, and the deliberate missing-report test produced the expected failed ingestion record, correlated with the Function logs.
-- Real-Time Totals CSV/XML collection and a prepared CSV containing Ontario Demand are implemented in the current development batch; live Azure verification is pending.
+- Real Time Totals CSV/XML collection and prepared CSV output verified: Ontario Demand is matched by delivery date, hour, and interval, with original-file preservation, ingestion records, replay, historical reconciliation, and ADF acceptance checks.
 - Dataset sequence: verify the Real-Time Totals prepared CSV, then add Kafka/Event Hubs; day-ahead LMP and generator output/capability remain Milestone 6.
 - No scheduled ingestion or CI/CD deployment is enabled by this batch.
 
