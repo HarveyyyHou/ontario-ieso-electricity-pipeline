@@ -9,7 +9,8 @@ from azure.data.tables import TableClient
 from azure.identity import ManagedIdentityCredential
 from azure.storage.blob import BlobServiceClient
 
-from collector import BlobArchive, Manifest, collect, request_options
+from collector import BlobArchive, IngestionRecords, collect, request_options
+import totals
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 logging.getLogger("azure").setLevel(logging.WARNING)
@@ -20,7 +21,13 @@ logging.getLogger("azure").setLevel(logging.WARNING)
 def collect_ieso(req: func.HttpRequest) -> func.HttpResponse:
     try:
         body = req.get_json()
-        request_options(body)
+        source = body.get("source") if isinstance(body, dict) else None
+        if source == "rt_totals":
+            totals.request_options(body)
+        elif source == "rt_lmp":
+            request_options(body)
+        else:
+            raise ValueError("source must be rt_lmp or rt_totals")
     except (ValueError, TypeError) as exc:
         return func.HttpResponse(json.dumps({"status": "failed", "stage": "request", "error": str(exc)}),
                                  status_code=400, mimetype="application/json")
@@ -41,8 +48,9 @@ def collect_ieso(req: func.HttpRequest) -> func.HttpResponse:
                 endpoint=f"https://{account}.table.core.windows.net", table_name=table_name,
                 credential=credential, retry_total=1, retry_backoff_factor=1,
                 connection_timeout=5, read_timeout=10))
-            result, code = collect(body, BlobArchive(blobs.get_container_client(container)),
-                                   Manifest(table), adf_run_id=adf_run_id)
+            collect_source = totals.collect if source == "rt_totals" else collect
+            result, code = collect_source(body, BlobArchive(blobs.get_container_client(container)),
+                                          IngestionRecords(table, source=source), adf_run_id=adf_run_id)
             result["container"] = container
         return func.HttpResponse(json.dumps(result), status_code=code, mimetype="application/json")
     except Exception:
