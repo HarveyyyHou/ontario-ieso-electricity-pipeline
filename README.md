@@ -9,7 +9,8 @@ The project focuses on data engineering. Its main goal is to make public electri
 ### Project Status
 
 - Milestone 1 completed and verified: manual ADF `pl_ieso_datacollect` calls `collect_ieso`, archives an IESO report in private ADLS raw storage, and identifies an identical rerun as `already_archived`.
-- Milestone 2 implementation is under review: complete-file LMP validation, an Azure Table ingestion manifest, quarantine, replay, and bounded reconciliation. Azure deployment and live verification are pending until the runbook checks pass.
+- Milestone 2 completed and verified for real-time LMP: full-file validation, ingestion records in Azure Table Storage (`iesodev001` / `iesoingestion`), quarantine, replay, duplicate handling, and bounded historical reconciliation.
+Application Insights logging and failure investigation verified. The Function uses `IESO_TABLE`. The earlier configuration error was corrected, and the deliberate missing-report test produced the expected failed ingestion record, correlated with the Function logs.
 - Dataset sequence: harden real-time LMP, add Real-Time Totals / Ontario Demand before Kafka, then add day-ahead LMP and generator output/capability in Milestone 6.
 - No scheduled ingestion or CI/CD deployment is enabled by this batch.
 
@@ -258,7 +259,7 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 
 - Record HTTP request status, retrieval time, source modification metadata, and report content hashes.
 - Preserve each unique or revised raw source report in ADLS Gen2.
-- Maintain a persistent manifest for collection, archival, and event-publishing status.
+- Maintain persistent ingestion records for collection, archival, and future event-publishing status.
 - Apply retries and backoff to transient errors without creating duplicate analytical results.
 - Reconcile dated IESO reports to identify missed updates or source corrections.
 - Store stable event IDs and business keys for replay-safe processing.
@@ -335,7 +336,7 @@ ontario-electricity-lakehouse/
 ### !2. Reliable Source Ingestion
 
 - Define source-specific schemas and ingestion contracts.
-- Implement source version detection, hashes, and a durable manifest.
+- Implement source version detection, hashes, and persistent ingestion records.
 - Add retry handling, validation, source reconciliation, and historical backfill.
 - Test missing, duplicate, and corrected IESO reports.
 
