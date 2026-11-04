@@ -1,442 +1,472 @@
 {
-  "name": "pl_ieso_datacollect",
-  "properties": {
-    "activities": [
-      {
-        "name": "act_collect_rt_lmp",
-        "type": "AzureFunctionActivity",
-        "dependsOn": [],
-        "policy": {
-          "timeout": "0.00:10:00",
-          "retry": 2,
-          "retryIntervalInSeconds": 30,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "functionName": "collect_ieso",
-          "body": {
-            "value": "@concat('{\"source\":\"rt_lmp\",\"report_file\":\"', pipeline().parameters.report_file, '\"}')",
-            "type": "Expression"
-          },
-          "headers": {
-            "Content-Type": "application/json",
-            "x-adf-run-id": {
-              "value": "@pipeline().RunId",
-              "type": "Expression"
-            }
-          },
-          "method": "POST"
-        },
-        "linkedServiceName": {
-          "referenceName": "ls_ieso_ingest_function",
-          "type": "LinkedServiceReference"
-        }
-      },
-      {
-        "name": "if_rt_lmp_accepted",
-        "type": "IfCondition",
-        "dependsOn": [
-          {
-            "activity": "act_collect_rt_lmp",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "userProperties": [],
-        "typeProperties": {
-          "expression": {
-            "value": "@equals(activity('act_collect_rt_lmp').output.validation_status, 'accepted')",
-            "type": "Expression"
-          },
-          "ifFalseActivities": [
-            {
-              "name": "fail_rt_lmp_not_accepted",
-              "type": "Fail",
-              "dependsOn": [],
-              "userProperties": [],
-              "typeProperties": {
-                "message": "IESO real time LMP ingestion did not return an accepted status.",
-                "errorCode": "IESO_INGEST_NOT_ACCEPTED"
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "until_rt_lmp_published",
-        "type": "Until",
-        "dependsOn": [
-          {
-            "activity": "if_rt_lmp_accepted",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "typeProperties": {
-          "expression": {
-            "value": "@or(variables('rt_lmp_publish_complete'), variables('rt_lmp_publish_failed'))",
-            "type": "Expression"
-          },
-          "timeout": "0.00:30:00",
-          "activities": [
-            {
-              "name": "act_publish_rt_lmp_batch",
-              "type": "AzureFunctionActivity",
-              "dependsOn": [],
-              "policy": {
-                "timeout": "0.00:10:00",
-                "retry": 2,
-                "retryIntervalInSeconds": 30,
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "functionName": "publish_ieso",
-                "body": {
-                  "value": "@concat('{\"source\":\"rt_lmp\",\"report_id\":\"', activity('act_collect_rt_lmp').output.sha256, '\",\"batch_size\":500}')",
-                  "type": "Expression"
-                },
-                "headers": {
-                  "Content-Type": "application/json",
-                  "x-adf-run-id": {
-                    "value": "@pipeline().RunId",
-                    "type": "Expression"
-                  }
-                },
-                "method": "POST"
-              },
-              "linkedServiceName": {
-                "referenceName": "ls_ieso_publish_function",
-                "type": "LinkedServiceReference"
-              }
-            },
-            {
-              "name": "if_rt_lmp_batch_succeeded",
-              "type": "IfCondition",
-              "dependsOn": [
-                {
-                  "activity": "act_publish_rt_lmp_batch",
-                  "dependencyConditions": [
-                    "Completed"
-                  ]
-                }
-              ],
-              "typeProperties": {
-                "expression": {
-                  "value": "@equals(activity('act_publish_rt_lmp_batch').Status, 'Succeeded')",
-                  "type": "Expression"
-                },
-                "ifTrueActivities": [
-                  {
-                    "name": "set_rt_lmp_publish_complete",
-                    "type": "SetVariable",
-                    "dependsOn": [],
-                    "typeProperties": {
-                      "variableName": "rt_lmp_publish_complete",
-                      "value": {
-                        "value": "@equals(activity('act_publish_rt_lmp_batch').output.complete, true)",
-                        "type": "Expression"
-                      }
-                    }
-                  }
-                ],
-                "ifFalseActivities": [
-                  {
-                    "name": "set_rt_lmp_publish_failed",
-                    "type": "SetVariable",
-                    "dependsOn": [],
-                    "typeProperties": {
-                      "variableName": "rt_lmp_publish_failed",
-                      "value": true
-                    }
-                  }
-                ]
-              }
-            },
-            {
-              "name": "wait_rt_lmp_next_batch",
-              "type": "Wait",
-              "dependsOn": [
-                {
-                  "activity": "if_rt_lmp_batch_succeeded",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "typeProperties": {
-                "waitTimeInSeconds": 5
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "if_rt_lmp_published",
-        "type": "IfCondition",
-        "dependsOn": [
-          {
-            "activity": "until_rt_lmp_published",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "typeProperties": {
-          "expression": {
-            "value": "@and(variables('rt_lmp_publish_complete'), not(variables('rt_lmp_publish_failed')))",
-            "type": "Expression"
-          },
-          "ifFalseActivities": [
-            {
-              "name": "fail_rt_lmp_publish_incomplete",
-              "type": "Fail",
-              "dependsOn": [],
-              "typeProperties": {
-                "message": "IESO rt_lmp publication failed or did not complete. Inspect the publishing activity output, Application Insights, and ingestion table.",
-                "errorCode": "IESO_PUBLISH_NOT_COMPLETE"
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "act_collect_rt_totals",
-        "type": "AzureFunctionActivity",
-        "dependsOn": [],
-        "policy": {
-          "timeout": "0.00:10:00",
-          "retry": 2,
-          "retryIntervalInSeconds": 30,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "functionName": "collect_ieso",
-          "body": {
-            "value": "@concat('{\"source\":\"rt_totals\",\"report_file\":\"', pipeline().parameters.totals_report_file, '\"}')",
-            "type": "Expression"
-          },
-          "headers": {
-            "Content-Type": "application/json",
-            "x-adf-run-id": {
-              "value": "@pipeline().RunId",
-              "type": "Expression"
-            }
-          },
-          "method": "POST"
-        },
-        "linkedServiceName": {
-          "referenceName": "ls_ieso_ingest_function",
-          "type": "LinkedServiceReference"
-        }
-      },
-      {
-        "name": "if_rt_totals_accepted",
-        "type": "IfCondition",
-        "dependsOn": [
-          {
-            "activity": "act_collect_rt_totals",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "userProperties": [],
-        "typeProperties": {
-          "expression": {
-            "value": "@equals(activity('act_collect_rt_totals').output.validation_status, 'accepted')",
-            "type": "Expression"
-          },
-          "ifFalseActivities": [
-            {
-              "name": "fail_rt_totals_not_accepted",
-              "type": "Fail",
-              "dependsOn": [],
-              "userProperties": [],
-              "typeProperties": {
-                "message": "IESO Real-Time Totals CSV/XML pair was not accepted. Inspect act_collect_rt_totals output and ingestion records.",
-                "errorCode": "IESO_TOTALS_NOT_ACCEPTED"
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "until_rt_totals_published",
-        "type": "Until",
-        "dependsOn": [
-          {
-            "activity": "if_rt_totals_accepted",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "typeProperties": {
-          "expression": {
-            "value": "@or(variables('rt_totals_publish_complete'), variables('rt_totals_publish_failed'))",
-            "type": "Expression"
-          },
-          "timeout": "0.00:30:00",
-          "activities": [
-            {
-              "name": "act_publish_rt_totals_batch",
-              "type": "AzureFunctionActivity",
-              "dependsOn": [],
-              "policy": {
-                "timeout": "0.00:10:00",
-                "retry": 2,
-                "retryIntervalInSeconds": 30,
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "functionName": "publish_ieso",
-                "body": {
-                  "value": "@concat('{\"source\":\"rt_totals\",\"report_id\":\"', activity('act_collect_rt_totals').output.report_id, '\",\"batch_size\":500}')",
-                  "type": "Expression"
-                },
-                "headers": {
-                  "Content-Type": "application/json",
-                  "x-adf-run-id": {
-                    "value": "@pipeline().RunId",
-                    "type": "Expression"
-                  }
-                },
-                "method": "POST"
-              },
-              "linkedServiceName": {
-                "referenceName": "ls_ieso_publish_function",
-                "type": "LinkedServiceReference"
-              }
-            },
-            {
-              "name": "if_rt_totals_batch_succeeded",
-              "type": "IfCondition",
-              "dependsOn": [
-                {
-                  "activity": "act_publish_rt_totals_batch",
-                  "dependencyConditions": [
-                    "Completed"
-                  ]
-                }
-              ],
-              "typeProperties": {
-                "expression": {
-                  "value": "@equals(activity('act_publish_rt_totals_batch').Status, 'Succeeded')",
-                  "type": "Expression"
-                },
-                "ifTrueActivities": [
-                  {
-                    "name": "set_rt_totals_publish_complete",
-                    "type": "SetVariable",
-                    "dependsOn": [],
-                    "typeProperties": {
-                      "variableName": "rt_totals_publish_complete",
-                      "value": {
-                        "value": "@equals(activity('act_publish_rt_totals_batch').output.complete, true)",
-                        "type": "Expression"
-                      }
-                    }
-                  }
-                ],
-                "ifFalseActivities": [
-                  {
-                    "name": "set_rt_totals_publish_failed",
-                    "type": "SetVariable",
-                    "dependsOn": [],
-                    "typeProperties": {
-                      "variableName": "rt_totals_publish_failed",
-                      "value": true
-                    }
-                  }
-                ]
-              }
-            },
-            {
-              "name": "wait_rt_totals_next_batch",
-              "type": "Wait",
-              "dependsOn": [
-                {
-                  "activity": "if_rt_totals_batch_succeeded",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "typeProperties": {
-                "waitTimeInSeconds": 5
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "if_rt_totals_published",
-        "type": "IfCondition",
-        "dependsOn": [
-          {
-            "activity": "until_rt_totals_published",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "typeProperties": {
-          "expression": {
-            "value": "@and(variables('rt_totals_publish_complete'), not(variables('rt_totals_publish_failed')))",
-            "type": "Expression"
-          },
-          "ifFalseActivities": [
-            {
-              "name": "fail_rt_totals_publish_incomplete",
-              "type": "Fail",
-              "dependsOn": [],
-              "typeProperties": {
-                "message": "IESO rt_totals publication failed or did not complete. Inspect the publishing activity output, Application Insights, and ingestion table.",
-                "errorCode": "IESO_PUBLISH_NOT_COMPLETE"
-              }
-            }
-          ]
-        }
-      }
-    ],
-    "parameters": {
-      "report_file": {
-        "type": "string",
-        "defaultValue": "PUB_RealtimeEnergyLMP.csv"
-      },
-      "totals_report_file": {
-        "type": "string",
-        "defaultValue": "PUB_RealtimeTotals.csv"
-      }
-    },
-    "annotations": [],
-    "variables": {
-      "rt_lmp_publish_complete": {
-        "type": "Bool",
-        "defaultValue": false
-      },
-      "rt_lmp_publish_failed": {
-        "type": "Bool",
-        "defaultValue": false
-      },
-      "rt_totals_publish_complete": {
-        "type": "Bool",
-        "defaultValue": false
-      },
-      "rt_totals_publish_failed": {
-        "type": "Bool",
-        "defaultValue": false
-      }
-    }
-  }
+	"name": "pl_ieso_datacollect",
+	"properties": {
+		"activities": [
+			{
+				"name": "act_collect_rt_lmp",
+				"type": "AzureFunctionActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"functionName": "collect_ieso",
+					"body": {
+						"value": "@concat('{\"source\":\"rt_lmp\",\"report_file\":\"', pipeline().parameters.report_file, '\"}')",
+						"type": "Expression"
+					},
+					"headers": {
+						"Content-Type": "application/json",
+						"x-adf-run-id": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					},
+					"method": "POST"
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_ieso_ingest_function",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "if_rt_lmp_accepted",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "act_collect_rt_lmp",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('act_collect_rt_lmp').output.validation_status, 'accepted')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "fail_rt_lmp_not_accepted",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "IESO real time LMP ingestion did not return an accepted status.",
+								"errorCode": "IESO_INGEST_NOT_ACCEPTED"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "until_rt_lmp_published",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "if_rt_lmp_accepted",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(variables('rt_lmp_publish_complete'), variables('rt_lmp_publish_failed'))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "act_publish_rt_lmp_batch",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.00:10:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "publish_ieso",
+								"body": {
+									"value": "@concat('{\"source\":\"rt_lmp\",\"report_id\":\"', activity('act_collect_rt_lmp').output.sha256, '\",\"batch_size\":500}')",
+									"type": "Expression"
+								},
+								"headers": {
+									"Content-Type": "application/json",
+									"x-adf-run-id": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									}
+								},
+								"method": "POST"
+							},
+							"linkedServiceName": {
+								"referenceName": "ls_ieso_publish_function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "if_rt_lmp_batch_succeeded",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "act_publish_rt_lmp_batch",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(activity('act_publish_rt_lmp_batch').Status, 'Succeeded')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "set_rt_lmp_publish_failed",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "rt_lmp_publish_failed",
+											"value": true
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "set_rt_lmp_publish_complete",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "rt_lmp_publish_complete",
+											"value": {
+												"value": "@equals(activity('act_publish_rt_lmp_batch').output.complete, true)",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "wait_rt_lmp_next_batch",
+							"type": "Wait",
+							"dependsOn": [
+								{
+									"activity": "if_rt_lmp_batch_succeeded",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 5
+							}
+						}
+					],
+					"timeout": "0.00:30:00"
+				}
+			},
+			{
+				"name": "if_rt_lmp_published",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "until_rt_lmp_published",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(variables('rt_lmp_publish_complete'), not(variables('rt_lmp_publish_failed')))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "fail_rt_lmp_publish_incomplete",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "IESO rt_lmp publication failed or did not complete. Inspect the publishing activity output, Application Insights, and ingestion table.",
+								"errorCode": "IESO_PUBLISH_NOT_COMPLETE"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "act_collect_rt_totals",
+				"type": "AzureFunctionActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"functionName": "collect_ieso",
+					"body": {
+						"value": "@concat('{\"source\":\"rt_totals\",\"report_file\":\"', pipeline().parameters.totals_report_file, '\"}')",
+						"type": "Expression"
+					},
+					"headers": {
+						"Content-Type": "application/json",
+						"x-adf-run-id": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					},
+					"method": "POST"
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_ieso_ingest_function",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "if_rt_totals_accepted",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "act_collect_rt_totals",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('act_collect_rt_totals').output.validation_status, 'accepted')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "fail_rt_totals_not_accepted",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "IESO Real-Time Totals CSV/XML pair was not accepted. Inspect act_collect_rt_totals output and ingestion records.",
+								"errorCode": "IESO_TOTALS_NOT_ACCEPTED"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "until_rt_totals_published",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "if_rt_totals_accepted",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(variables('rt_totals_publish_complete'), variables('rt_totals_publish_failed'))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "act_publish_rt_totals_batch",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.00:10:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "publish_ieso",
+								"body": {
+									"value": "@concat('{\"source\":\"rt_totals\",\"report_id\":\"', activity('act_collect_rt_totals').output.report_id, '\",\"batch_size\":500}')",
+									"type": "Expression"
+								},
+								"headers": {
+									"Content-Type": "application/json",
+									"x-adf-run-id": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									}
+								},
+								"method": "POST"
+							},
+							"linkedServiceName": {
+								"referenceName": "ls_ieso_publish_function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "if_rt_totals_batch_succeeded",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "act_publish_rt_totals_batch",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(activity('act_publish_rt_totals_batch').Status, 'Succeeded')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "set_rt_totals_publish_failed",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "rt_totals_publish_failed",
+											"value": true
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "set_rt_totals_publish_complete",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "rt_totals_publish_complete",
+											"value": {
+												"value": "@equals(activity('act_publish_rt_totals_batch').output.complete, true)",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "wait_rt_totals_next_batch",
+							"type": "Wait",
+							"dependsOn": [
+								{
+									"activity": "if_rt_totals_batch_succeeded",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 5
+							}
+						}
+					],
+					"timeout": "0.00:30:00"
+				}
+			},
+			{
+				"name": "if_rt_totals_published",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "until_rt_totals_published",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(variables('rt_totals_publish_complete'), not(variables('rt_totals_publish_failed')))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "fail_rt_totals_publish_incomplete",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "IESO rt_totals publication failed or did not complete. Inspect the publishing activity output, Application Insights, and ingestion table.",
+								"errorCode": "IESO_PUBLISH_NOT_COMPLETE"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"report_file": {
+				"type": "string",
+				"defaultValue": "PUB_RealtimeEnergyLMP.csv"
+			},
+			"totals_report_file": {
+				"type": "string",
+				"defaultValue": "PUB_RealtimeTotals.csv"
+			}
+		},
+		"variables": {
+			"rt_lmp_publish_complete": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"rt_lmp_publish_failed": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"rt_totals_publish_complete": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"rt_totals_publish_failed": {
+				"type": "Boolean",
+				"defaultValue": false
+			}
+		},
+		"annotations": []
+	}
 }
