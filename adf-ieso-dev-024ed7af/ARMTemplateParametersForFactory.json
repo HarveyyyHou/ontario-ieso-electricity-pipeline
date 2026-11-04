@@ -10,6 +10,9 @@
 		},
 		"ls_ieso_keyvault_properties_typeProperties_baseUrl": {
 			"value": "https://kv-ieso-dev-024ed7af.vault.azure.net/"
+		},
+		"ls_ieso_publish_function_properties_typeProperties_functionAppUrl": {
+			"value": "https://func-ieso-ingest-dev-024ed7af.azurewebsites.net"
 		}
 	}
 }

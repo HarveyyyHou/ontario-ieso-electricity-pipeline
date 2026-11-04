@@ -15,6 +15,10 @@
 			"type": "string",
 			"defaultValue": "https://kv-ieso-dev-024ed7af.vault.azure.net/"
 		},
+		"ls_ieso_publish_function_properties_typeProperties_functionAppUrl": {
+			"type": "string",
+			"defaultValue": "https://func-ieso-ingest-dev-024ed7af.azurewebsites.net"
+		},
 		"containerUri": {
 			"type": "string",
 			"metadata": "URI to storage account containing linked ARM templates"
@@ -47,6 +51,9 @@
 					},
 					"ls_ieso_ingest_function_properties_typeProperties_functionAppUrl": {
 						"value": "[parameters('ls_ieso_ingest_function_properties_typeProperties_functionAppUrl')]"
+					},
+					"ls_ieso_publish_function_properties_typeProperties_functionAppUrl": {
+						"value": "[parameters('ls_ieso_publish_function_properties_typeProperties_functionAppUrl')]"
 					}
 				}
 			},
