@@ -1,0 +1,304 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IESO observation event v1",
+  "description": "One accepted CSV observation. Decimal measurements are strings. event_id identifies values; report_event_id identifies a report occurrence.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "source",
+    "event_id",
+    "report_event_id",
+    "delivery_date",
+    "delivery_hour",
+    "interval",
+    "pricing_location",
+    "interval_start_utc",
+    "interval_end_utc",
+    "units",
+    "measurements",
+    "flag",
+    "report",
+    "publication"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "ieso_observation_v1"
+    },
+    "source": {
+      "enum": [
+        "rt_lmp",
+        "rt_totals"
+      ]
+    },
+    "event_id": {
+      "$ref": "#/$defs/hash"
+    },
+    "report_event_id": {
+      "$ref": "#/$defs/hash"
+    },
+    "delivery_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "delivery_hour": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 24
+    },
+    "interval": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 12
+    },
+    "pricing_location": {
+      "type": "string",
+      "minLength": 1
+    },
+    "interval_start_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "interval_end_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "units": {
+      "enum": [
+        "CAD/MWh",
+        "MW"
+      ]
+    },
+    "measurements": {
+      "type": "object"
+    },
+    "flag": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "report": {
+      "type": "object",
+      "required": [
+        "report_id",
+        "record_partition",
+        "csv_sha256",
+        "csv_blob_path",
+        "first_seen_utc",
+        "source_time_convention",
+        "source_version_utc",
+        "source_created_csv_local"
+      ],
+      "properties": {
+        "report_id": {
+          "$ref": "#/$defs/hash"
+        },
+        "record_partition": {
+          "enum": [
+            "rt_lmp_v1",
+            "rt_totals_v1"
+          ]
+        },
+        "csv_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "csv_blob_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "first_seen_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source_time_convention": {
+          "const": "EST_UTC_MINUS_05"
+        },
+        "source_version_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source_created_csv_local": {
+          "type": "string"
+        },
+        "source_created_xml_local": {
+          "type": "string"
+        },
+        "xml_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "prepared_csv_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "prepared_csv_blob_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "publication": {
+      "type": "object",
+      "required": [
+        "run_id",
+        "adf_run_id",
+        "attempted_at_utc"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "adf_run_id": {
+          "type": "string"
+        },
+        "attempted_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "rt_lmp"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "units": {
+            "const": "CAD/MWh"
+          },
+          "measurements": {
+            "type": "object",
+            "required": [
+              "lmp",
+              "energy_loss_price",
+              "energy_congestion_price"
+            ],
+            "properties": {
+              "lmp": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "energy_loss_price": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "energy_congestion_price": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "flag": {
+            "type": "null"
+          },
+          "report": {
+            "properties": {
+              "record_partition": {
+                "const": "rt_lmp_v1"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "rt_totals"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "units": {
+            "const": "MW"
+          },
+          "measurements": {
+            "type": "object",
+            "required": [
+              "total_energy",
+              "total_loss",
+              "total_load",
+              "total_dispatch_load_scheduled_off",
+              "total_10s",
+              "total_10n",
+              "total_30r",
+              "ontario_demand"
+            ],
+            "properties": {
+              "total_energy": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "total_loss": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "total_load": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "total_dispatch_load_scheduled_off": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "total_10s": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "total_10n": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "total_30r": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "ontario_demand": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "flag": {
+            "type": "string",
+            "minLength": 1
+          },
+          "report": {
+            "properties": {
+              "record_partition": {
+                "const": "rt_totals_v1"
+              }
+            },
+            "required": [
+              "xml_sha256",
+              "prepared_csv_sha256",
+              "prepared_csv_blob_path",
+              "source_created_xml_local"
+            ]
+          },
+          "pricing_location": {
+            "const": "ONTARIO"
+          }
+        }
+      }
+    }
+  ]
+}
