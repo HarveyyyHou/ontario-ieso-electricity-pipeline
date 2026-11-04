@@ -4,3 +4,4 @@ azure-storage-blob==12.31.1
 requests==2.34.2
 azure-data-tables==12.7.0
 defusedxml==0.7.1
+confluent-kafka==2.12.2

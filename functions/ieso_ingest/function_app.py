@@ -11,6 +11,7 @@ from azure.storage.blob import BlobServiceClient
 
 from collector import BlobArchive, IngestionRecords, collect, request_options
 import totals
+import publisher
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 logging.getLogger("azure").setLevel(logging.WARNING)
@@ -57,4 +58,46 @@ def collect_ieso(req: func.HttpRequest) -> func.HttpResponse:
         logging.exception("ieso_configuration_or_client_failure")
         return func.HttpResponse(json.dumps({"status": "failed", "stage": "configuration",
                                              "error": "Inspect Function settings, identity permissions, and Application Insights"}),
+                                 status_code=500, mimetype="application/json")
+
+
+@app.function_name(name="publish_ieso")
+@app.route(route="publish_ieso", methods=["POST"])
+def publish_ieso(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        body = req.get_json()
+        source, _, _ = publisher.request_options(body)
+        adf_run_id = req.headers.get("x-adf-run-id", "")
+        if adf_run_id and not re.fullmatch(r"[A-Za-z0-9-]{1,80}", adf_run_id):
+            raise ValueError("Invalid x-adf-run-id")
+    except (ValueError, TypeError) as exc:
+        return func.HttpResponse(json.dumps({"status": "failed", "complete": False,
+                                             "stage": "request", "error": str(exc)}),
+                                 status_code=400, mimetype="application/json")
+    if os.environ.get("IESO_PUBLISH_ENABLED", "false").lower() != "true":
+        return func.HttpResponse(json.dumps({"status": "disabled", "complete": False,
+                                             "error": "Set IESO_PUBLISH_ENABLED=true after configuring Event Hubs and identity access"}),
+                                 status_code=503, mimetype="application/json")
+    try:
+        namespace = os.environ["IESO_EVENTHUB_NAMESPACE"]
+        topic = os.environ.get("IESO_EVENTHUB_" + source.upper(), publisher.DEFAULT_TOPICS[source])
+        publisher.validate_destination(namespace, topic)
+        account, container = os.environ["IESO_STORAGE_ACCOUNT"], os.environ["IESO_RAW_CONTAINER"]
+        with ExitStack() as stack:
+            credential = stack.enter_context(ManagedIdentityCredential(
+                retry_total=1, connection_timeout=5, read_timeout=10))
+            blobs = stack.enter_context(BlobServiceClient(
+                account_url=f"https://{account}.blob.core.windows.net", credential=credential,
+                retry_total=0, connection_timeout=5, read_timeout=10))
+            table = stack.enter_context(TableClient(
+                endpoint=f"https://{account}.table.core.windows.net", table_name=os.environ["IESO_TABLE"],
+                credential=credential, retry_total=0, connection_timeout=5, read_timeout=10))
+            sender = lambda run_id: publisher.KafkaBatchSender(credential, namespace, topic, run_id)
+            result, code = publisher.publish(body, BlobArchive(blobs.get_container_client(container)),
+                                             publisher.PublicationRecords(table), sender, namespace, topic, adf_run_id)
+        return func.HttpResponse(json.dumps(result), status_code=code, mimetype="application/json")
+    except Exception:
+        logging.exception("ieso_publish_configuration_failure")
+        return func.HttpResponse(json.dumps({"status": "failed", "complete": False, "stage": "configuration",
+                                             "error": "Inspect publisher settings, identity permissions, and Application Insights"}),
                                  status_code=500, mimetype="application/json")
