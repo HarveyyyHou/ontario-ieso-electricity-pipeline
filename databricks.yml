@@ -1,0 +1,38 @@
+bundle:
+  name: ieso-milestone4
+
+include:
+  - resources/milestone4.job.yml
+
+sync:
+  include:
+    - databricks/milestone4/**
+    - functions/ieso_ingest/events.py
+  exclude:
+    - adf/**
+    - docs/**
+    - tests/**
+    - tools/**
+    - functions/ieso_ingest/collector.py
+    - functions/ieso_ingest/function_app.py
+    - functions/ieso_ingest/host.json
+    - functions/ieso_ingest/publisher.py
+    - functions/ieso_ingest/requirements.txt
+    - functions/ieso_ingest/totals.py
+
+variables:
+  job_runner_application_id:
+    description: Application ID of the Databricks service principal used as the job Run as identity.
+  source_revision:
+    description: Reviewed main commit from which the code was deployed.
+
+permissions:
+  - service_principal_name: ${var.job_runner_application_id}
+    level: CAN_VIEW
+
+run_as:
+  service_principal_name: ${var.job_runner_application_id}
+
+targets:
+  dev:
+    default: true

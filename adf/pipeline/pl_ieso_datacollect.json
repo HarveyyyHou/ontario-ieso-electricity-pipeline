@@ -437,6 +437,81 @@
 						}
 					]
 				}
+			},
+			{
+				"name": "if_run_databricks",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "if_rt_lmp_published",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "if_rt_totals_published",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"typeProperties": {
+					"expression": {
+						"value": "@pipeline().parameters.run_databricks",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "act_run_m4_bronze_silver",
+							"type": "DatabricksJob",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.00:25:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"linkedServiceName": {
+								"referenceName": "ls_ieso_databricks",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"jobId": {
+									"value": "@pipeline().parameters.databricks_job_id",
+									"type": "Expression"
+								},
+								"jobParameters": {
+									"lmp_report_id": {
+										"value": "@activity('act_collect_rt_lmp').output.sha256",
+										"type": "Expression"
+									},
+									"lmp_expected_count": {
+										"value": "@string(activity('act_collect_rt_lmp').output.row_count)",
+										"type": "Expression"
+									},
+									"totals_report_id": {
+										"value": "@activity('act_collect_rt_totals').output.report_id",
+										"type": "Expression"
+									},
+									"totals_expected_count": {
+										"value": "@string(activity('act_collect_rt_totals').output.row_count)",
+										"type": "Expression"
+									},
+									"adf_run_id": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"mode": "kafka",
+									"fault": {
+										"value": "@pipeline().parameters.databricks_fault",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
 			}
 		],
 		"parameters": {
@@ -447,6 +522,18 @@
 			"totals_report_file": {
 				"type": "string",
 				"defaultValue": "PUB_RealtimeTotals.csv"
+			},
+			"run_databricks": {
+				"type": "Bool",
+				"defaultValue": false
+			},
+			"databricks_job_id": {
+				"type": "string",
+				"defaultValue": ""
+			},
+			"databricks_fault": {
+				"type": "string",
+				"defaultValue": "none"
 			}
 		},
 		"variables": {

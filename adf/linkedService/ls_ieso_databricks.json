@@ -1,0 +1,12 @@
+{
+  "name": "ls_ieso_databricks",
+  "properties": {
+    "type": "AzureDatabricks",
+    "typeProperties": {
+      "domain": "https://adb-7405605219777405.5.azuredatabricks.net",
+      "authentication": "MSI",
+      "workspaceResourceId": "/subscriptions/9e4a2c83-1ec4-49d5-8317-14ac59ed7cc8/resourceGroups/ieso_development/providers/Microsoft.Databricks/workspaces/dbw-ieso-dev-024ed7af"
+    },
+    "annotations": []
+  }
+}

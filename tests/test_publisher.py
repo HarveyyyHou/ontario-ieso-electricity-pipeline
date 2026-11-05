@@ -296,7 +296,18 @@ class PipelineTests(unittest.TestCase):
         path = Path(__file__).resolve().parents[1] / "adf/pipeline/pl_ieso_datacollect.json"
         pipeline = json.loads(path.read_text())["properties"]
         activities = {a["name"]: a for a in pipeline["activities"]}
+        databricks_gate = activities.pop("if_run_databricks")
         self.assertEqual(len(activities), 8)
+        self.assertFalse(pipeline["parameters"]["run_databricks"]["defaultValue"])
+        self.assertEqual(
+            {dep["activity"]: dep["dependencyConditions"] for dep in databricks_gate["dependsOn"]},
+            {"if_rt_lmp_published": ["Succeeded"], "if_rt_totals_published": ["Succeeded"]},
+        )
+        job = databricks_gate["typeProperties"]["ifTrueActivities"][0]
+        self.assertEqual(job["type"], "DatabricksJob")
+        params = job["typeProperties"]["jobParameters"]
+        self.assertIn(".output.sha256", params["lmp_report_id"]["value"])
+        self.assertIn(".output.report_id", params["totals_report_id"]["value"])
         for source in ("rt_lmp", "rt_totals"):
             self.assertEqual(activities["act_collect_" + source]["policy"]["timeout"], "0.00:10:00")
             loop = activities["until_" + source + "_published"]

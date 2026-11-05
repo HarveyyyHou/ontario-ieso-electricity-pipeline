@@ -1,0 +1,82 @@
+resources:
+  jobs:
+    ieso_m4_probe:
+      name: ieso_m4_kafka_readback
+      max_concurrent_runs: 1
+      timeout_seconds: 600
+      tags:
+        project: ieso
+        milestone: "4"
+      parameters:
+        - name: lmp_report_id
+          default: ""
+        - name: lmp_expected_count
+          default: ""
+        - name: totals_report_id
+          default: ""
+        - name: totals_expected_count
+          default: ""
+      tasks:
+        - task_key: readback
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../databricks/milestone4/run.ipynb
+            base_parameters:
+              repo_root: ${workspace.file_path}
+              action: probe
+              source_revision: ${var.source_revision}
+
+    ieso_m4_process:
+      name: ieso_m4_bronze_silver
+      max_concurrent_runs: 1
+      timeout_seconds: 1200
+      queue:
+        enabled: false
+      tags:
+        project: ieso
+        milestone: "4"
+      parameters:
+        - name: lmp_report_id
+          default: ""
+        - name: lmp_expected_count
+          default: ""
+        - name: totals_report_id
+          default: ""
+        - name: totals_expected_count
+          default: ""
+        - name: adf_run_id
+          default: ""
+        - name: mode
+          default: kafka
+        - name: archive_record
+          default: ""
+        - name: fault
+          default: none
+      tasks:
+        - task_key: bronze
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../databricks/milestone4/run.ipynb
+            base_parameters: &runtime
+              repo_root: ${workspace.file_path}
+              action: bronze
+              source_revision: ${var.source_revision}
+              job_run_id: "{{job.run_id}}"
+        - task_key: silver
+          depends_on:
+            - task_key: bronze
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../databricks/milestone4/run.ipynb
+            base_parameters:
+              <<: *runtime
+              action: silver
+        - task_key: validate
+          depends_on:
+            - task_key: silver
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../databricks/milestone4/run.ipynb
+            base_parameters:
+              <<: *runtime
+              action: validate
