@@ -7,6 +7,7 @@ include:
 sync:
   include:
     - databricks/milestone4/**
+    - databricks/milestone4/ieso_m4_pydeps.zip
     - functions/ieso_ingest/events.py
   exclude:
     - adf/**
