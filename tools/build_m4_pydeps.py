@@ -1,11 +1,13 @@
 
 """Package Milestone 4 Python modules for Spark workers."""
 
+import base64
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "databricks/milestone4/ieso_m4_pydeps.zip"
+ENCODED_OUTPUT = ROOT / "databricks/milestone4/ieso_m4_pydeps.b64"
 
 SOURCES = {
     "milestone4/__init__.py":
@@ -40,3 +42,10 @@ with ZipFile(OUTPUT) as archive:
     print("Included files:")
     for name in archive.namelist():
         print(f"  {name}")
+
+# Encode the verified ZIP as text for reliable bundle synchronization.
+encoded = base64.b64encode(OUTPUT.read_bytes()).decode("ascii")
+
+ENCODED_OUTPUT.write_text(encoded + "\n", encoding="ascii")
+
+print(f"Created bundle-safe dependency file: {ENCODED_OUTPUT}")

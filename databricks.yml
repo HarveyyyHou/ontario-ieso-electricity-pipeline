@@ -7,7 +7,7 @@ include:
 sync:
   include:
     - databricks/milestone4/**
-    - databricks/milestone4/ieso_m4_pydeps.zip
+    - databricks/milestone4/ieso_m4_pydeps.b64
     - functions/ieso_ingest/events.py
   exclude:
     - adf/**
@@ -20,6 +20,10 @@ sync:
     - functions/ieso_ingest/publisher.py
     - functions/ieso_ingest/requirements.txt
     - functions/ieso_ingest/totals.py
+    - databricks/milestone4/ieso_m4_pydeps.zip
+    - "**/__pycache__/**"
+    - "**/*.pyc"
+    - .Rhistory
 
 variables:
   job_runner_application_id:
