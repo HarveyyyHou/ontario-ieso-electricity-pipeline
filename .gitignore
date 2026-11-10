@@ -11,3 +11,9 @@ evidence/
 # Local configuration and history logs
 publish.config.json
 *.Rhistory
+
+# Local Milestone 4 Python environment
+.venv-m4/
+
+# Generated Databricks worker dependency
+databricks/milestone4/ieso_m4_pydeps.b64

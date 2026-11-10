@@ -24,6 +24,7 @@ sync:
     - "**/__pycache__/**"
     - "**/*.pyc"
     - .Rhistory
+    - .venv-m4/**
 
 variables:
   job_runner_application_id:
