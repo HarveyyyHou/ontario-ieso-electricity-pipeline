@@ -3,7 +3,6 @@
 import json
 from datetime import datetime, timezone
 
-from pyspark import cloudpickle
 from pyspark.sql import functions as F, types as T
 
 from milestone4 import observations as obs
@@ -78,12 +77,16 @@ def kafka_deliveries(frame):
 
 
 def classify(frame, source):
-    # Serialize the two pure Python modules with the UDF for Spark Connect workers.
-    cloudpickle.register_pickle_by_value(obs)
-    cloudpickle.register_pickle_by_value(obs.events)
-    validate = F.udf(lambda payload, key: obs.decode(source, payload, key), silver_fields(source))
-    return (frame.withColumn("decoded", validate("payload", "message_key"))
-            .select(*LINEAGE, "decoded.*"))
+    # Import the validation modules on Spark workers from the
+    # Python ZIP dependency registered by run.ipynb.
+    validate = F.udf(
+        lambda payload, key: obs.decode(source, payload, key),
+        silver_fields(source)
+    )
+    return (
+        frame.withColumn("decoded", validate("payload", "message_key"))
+        .select(*LINEAGE, "decoded.*")
+    )
 
 
 def probe(spark, source, expected=None):
