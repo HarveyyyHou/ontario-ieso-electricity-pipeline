@@ -1,9 +1,13 @@
 __pycache__/
 *.py[cod]
-.venv*/
+.venv/
 .python_packages/
-local.settings.json
+local_settings.json
 *.zip
 .env
 evidence/
 .databricks/
+
+# Local configuration and history logs
+publish.config.json
+*.Rhistory
