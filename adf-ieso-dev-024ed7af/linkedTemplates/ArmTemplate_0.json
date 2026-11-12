@@ -25,6 +25,21 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/ls_ieso_databricks')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureDatabricks",
+				"typeProperties": {
+					"domain": "https://adb-7405605219777405.5.azuredatabricks.net",
+					"authentication": "MSI",
+					"workspaceResourceId": "/subscriptions/9e4a2c83-1ec4-49d5-8317-14ac59ed7cc8/resourceGroups/ieso_development/providers/Microsoft.Databricks/workspaces/dbw-ieso-dev-024ed7af"
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ls_ieso_keyvault')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -526,6 +541,83 @@
 								}
 							]
 						}
+					},
+					{
+						"name": "if_run_databricks",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "if_rt_lmp_published",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "if_rt_totals_published",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@pipeline().parameters.run_databricks",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "act_run_m4_bronze_silver",
+									"type": "DatabricksJob",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:25:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"jobId": {
+											"value": "@pipeline().parameters.databricks_job_id",
+											"type": "Expression"
+										},
+										"jobParameters": {
+											"lmp_report_id": {
+												"value": "@activity('act_collect_rt_lmp').output.sha256",
+												"type": "Expression"
+											},
+											"lmp_expected_count": {
+												"value": "@string(activity('act_collect_rt_lmp').output.row_count)",
+												"type": "Expression"
+											},
+											"totals_report_id": {
+												"value": "@activity('act_collect_rt_totals').output.report_id",
+												"type": "Expression"
+											},
+											"totals_expected_count": {
+												"value": "@string(activity('act_collect_rt_totals').output.row_count)",
+												"type": "Expression"
+											},
+											"adf_run_id": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											},
+											"mode": "kafka",
+											"fault": {
+												"value": "@pipeline().parameters.databricks_fault",
+												"type": "Expression"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "ls_ieso_databricks",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -539,6 +631,17 @@
 					"totals_report_file": {
 						"type": "string",
 						"defaultValue": "PUB_RealtimeTotals.csv"
+					},
+					"run_databricks": {
+						"type": "Bool",
+						"defaultValue": false
+					},
+					"databricks_job_id": {
+						"type": "string"
+					},
+					"databricks_fault": {
+						"type": "string",
+						"defaultValue": "none"
 					}
 				},
 				"variables": {
@@ -563,7 +666,8 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_ingest_function')]",
-				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_publish_function')]"
+				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_publish_function')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_databricks')]"
 			]
 		}
 	]
