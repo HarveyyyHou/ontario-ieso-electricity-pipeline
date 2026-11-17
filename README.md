@@ -266,12 +266,11 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
   - `pl_ieso_datacollect`: Existing collection pipeline; scheduling remains planned.
   - `pl_databricks_processing`: Incremental Event Hubs-to-Gold processing.
   - `pl_ieso_reconciliation`: Scheduled checks for missed or revised source reports.
-- Proposed initial timing:
-  - LMP and demand collection: Every five minutes.
-  - Databricks incremental processing: Every 15 minutes.
-  - Generator report collection: Every five to ten minutes once added.
-  - Day ahead report collection: Near expected publication, with daily reconciliation.
-- Refine schedules after measuring real publication delay, actual data volume, and Azure operating cost.
+- **Preferred option for evaluation: one batch every two days for real-time LMP and Ontario Demand.** In one ADF batch, collect and archive the dated hourly IESO reports since the last successful collection, check for gaps, and preserve the five-minute observations. Publish to Event Hubs and start Databricks processing in the same batch, within the current 24-hour retention window. When Power BI is added, refresh it after Gold succeeds.
+- Keep Milestone 5 Gold runs manual. Decide the final interval in Milestone 7 after researching source availability and dashboard freshness needs, and measuring the coverage, runtime, and Azure cost of a representative two-day batch.
+- Tentative timing for later feeds:
+  - Generator report collection every five to ten minutes once added.
+  - Day-ahead report collection near expected publication, with daily reconciliation.
 - Use cost-conscious incremental Spark processing where practical instead of running Databricks compute continuously.
 
 ## 6. Data Quality, Monitoring, and Recovery

@@ -1,0 +1,51 @@
+bundle:
+  name: ieso-milestone5
+
+sync:
+  include:
+    - gold.py
+
+variables:
+  job_runner_application_id:
+    description: Application ID of the existing Databricks job service principal.
+  source_revision:
+    description: Reviewed main commit used for deployment.
+
+permissions:
+  - service_principal_name: ${var.job_runner_application_id}
+    level: CAN_VIEW
+
+run_as:
+  service_principal_name: ${var.job_runner_application_id}
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: https://adb-7405605219777405.5.azuredatabricks.net
+
+resources:
+  jobs:
+    ieso_m5_gold:
+      name: ieso_m5_gold
+      performance_target: STANDARD
+      max_concurrent_runs: 1
+      timeout_seconds: 900
+      queue:
+        enabled: false
+      tags:
+        project: ieso
+        milestone: "5"
+      parameters:
+        - name: start_date
+          default: auto
+        - name: end_date
+          default: ""
+      tasks:
+        - task_key: refresh_gold
+          max_retries: 0
+          notebook_task:
+            notebook_path: ./gold.py
+            base_parameters:
+              source_revision: ${var.source_revision}
+              job_run_id: "{{job.run_id}}"
