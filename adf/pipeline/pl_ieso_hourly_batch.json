@@ -1,0 +1,146 @@
+{
+  "name": "pl_ieso_hourly_batch",
+  "properties": {
+    "concurrency": 1,
+    "parameters": {
+      "delivery_date": {
+        "type": "String"
+      },
+      "databricks_job_id": {
+        "type": "String"
+      },
+      "da_lmp_replay_sha": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "generator_replay_sha": {
+        "type": "String",
+        "defaultValue": ""
+      }
+    },
+    "activities": [
+      {
+        "name": "collect_da_lmp",
+        "type": "AzureFunctionActivity",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.00:05:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "linkedServiceName": {
+          "referenceName": "ls_ieso_ingest_function",
+          "type": "LinkedServiceReference"
+        },
+        "typeProperties": {
+          "functionName": "collect_ieso",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "x-adf-run-id": {
+              "value": "@pipeline().RunId",
+              "type": "Expression"
+            }
+          },
+          "body": {
+            "value": "@concat('{\"source\":\"da_lmp\",\"delivery_date\":\"', pipeline().parameters.delivery_date, '\",\"replay_sha\":\"', pipeline().parameters.da_lmp_replay_sha, '\"}')",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "collect_generator",
+        "type": "AzureFunctionActivity",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.00:05:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "linkedServiceName": {
+          "referenceName": "ls_ieso_ingest_function",
+          "type": "LinkedServiceReference"
+        },
+        "typeProperties": {
+          "functionName": "collect_ieso",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "x-adf-run-id": {
+              "value": "@pipeline().RunId",
+              "type": "Expression"
+            }
+          },
+          "body": {
+            "value": "@concat('{\"source\":\"generator\",\"delivery_date\":\"', pipeline().parameters.delivery_date, '\",\"replay_sha\":\"', pipeline().parameters.generator_replay_sha, '\"}')",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "run_hourly_databricks",
+        "type": "DatabricksJob",
+        "dependsOn": [
+          {
+            "activity": "collect_da_lmp",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "collect_generator",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.00:25:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "linkedServiceName": {
+          "referenceName": "ls_ieso_databricks",
+          "type": "LinkedServiceReference"
+        },
+        "typeProperties": {
+          "jobId": {
+            "value": "@pipeline().parameters.databricks_job_id",
+            "type": "Expression"
+          },
+          "jobParameters": {
+            "delivery_date": {
+              "value": "@pipeline().parameters.delivery_date",
+              "type": "Expression"
+            },
+            "da_report": {
+              "value": "@string(activity('collect_da_lmp').output.report)",
+              "type": "Expression"
+            },
+            "generator_report": {
+              "value": "@string(activity('collect_generator').output.report)",
+              "type": "Expression"
+            },
+            "adf_run_id": {
+              "value": "@pipeline().RunId",
+              "type": "Expression"
+            }
+          }
+        }
+      }
+    ],
+    "annotations": [
+      "manual",
+      "milestone6"
+    ]
+  }
+}

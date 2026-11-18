@@ -11,6 +11,7 @@ from azure.storage.blob import BlobServiceClient
 
 from collector import BlobArchive, IngestionRecords, collect, request_options
 import totals
+import hourly
 import publisher
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
@@ -27,8 +28,10 @@ def collect_ieso(req: func.HttpRequest) -> func.HttpResponse:
             totals.request_options(body)
         elif source == "rt_lmp":
             request_options(body)
+        elif source in ("da_lmp", "generator"):
+            hourly.request_options(body)
         else:
-            raise ValueError("source must be rt_lmp or rt_totals")
+            raise ValueError("source must be rt_lmp, rt_totals, da_lmp, or generator")
     except (ValueError, TypeError) as exc:
         return func.HttpResponse(json.dumps({"status": "failed", "stage": "request", "error": str(exc)}),
                                  status_code=400, mimetype="application/json")
@@ -49,7 +52,8 @@ def collect_ieso(req: func.HttpRequest) -> func.HttpResponse:
                 endpoint=f"https://{account}.table.core.windows.net", table_name=table_name,
                 credential=credential, retry_total=1, retry_backoff_factor=1,
                 connection_timeout=5, read_timeout=10))
-            collect_source = totals.collect if source == "rt_totals" else collect
+            collect_source = {"rt_totals": totals.collect, "da_lmp": hourly.collect,
+                              "generator": hourly.collect}.get(source, collect)
             result, code = collect_source(body, BlobArchive(blobs.get_container_client(container)),
                                           IngestionRecords(table, source=source), adf_run_id=adf_run_id)
             result["container"] = container

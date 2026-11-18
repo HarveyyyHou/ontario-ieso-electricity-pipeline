@@ -1,0 +1,55 @@
+bundle:
+  name: ieso-milestone6
+
+sync:
+  include:
+    - hourly_batch.py
+
+variables:
+  job_runner_application_id:
+    description: Application ID of the existing Databricks job service principal.
+  source_revision:
+    description: Reviewed main commit used for deployment.
+
+permissions:
+  - service_principal_name: ${var.job_runner_application_id}
+    level: CAN_VIEW
+
+run_as:
+  service_principal_name: ${var.job_runner_application_id}
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: https://adb-7405605219777405.5.azuredatabricks.net
+
+resources:
+  jobs:
+    ieso_m6_hourly:
+      name: ieso_m6_hourly
+      performance_target: STANDARD
+      max_concurrent_runs: 1
+      timeout_seconds: 900
+      queue:
+        enabled: false
+      tags:
+        project: ieso
+        milestone: "6"
+      parameters:
+        - name: delivery_date
+          default: ""
+        - name: da_report
+          default: ""
+        - name: generator_report
+          default: ""
+        - name: adf_run_id
+          default: ""
+      tasks:
+        - task_key: publish_hourly
+          max_retries: 0
+          notebook_task:
+            notebook_path: ./hourly_batch.py
+            base_parameters:
+              source_revision: ${var.source_revision}
+              job_run_id: "{{job.run_id}}"

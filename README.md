@@ -13,8 +13,10 @@ The project focuses on data engineering. Its main goal is to make public electri
 - Application Insights logging and failure investigation verified. The Function uses `IESO_TABLE`. The earlier configuration error was corrected, and the deliberate missing-report test produced the expected failed ingestion record, correlated with the Function logs.
 - Real Time Totals CSV/XML collection and prepared CSV output verified: Ontario Demand is matched by delivery date, hour, and interval, with original-file preservation, ingestion records, replay, historical reconciliation, and ADF acceptance checks.
 - Milestone 3 producer publication and repeat protection were verified for both feeds.
-- Milestone 4 adds bounded Serverless Kafka ingestion, typed Delta Silver processing, archive replay, and an optional ADF job activity. Day-ahead LMP and generator output/capability remain Milestone 6.
-- No scheduled ingestion or CI/CD deployment is enabled by this batch.
+- Milestone 4 adds bounded Serverless Kafka ingestion, typed Delta Silver processing, archive replay, and an optional ADF job activity. Day-ahead LMP and generator output/capability are covered in Milestone 6.
+- Milestone 5 verified the real-time Gold refresh on delivery date 2026-11-12. The manual job reconciled 5,320 real-time price observations and 5 Ontario Demand observations to 288 five-minute slots.
+- Milestone 6 adds a manual dated-file batch for day-ahead LMP and generator output/capability. ADF collects both files before triggering the hourly Databricks job.
+- Recurring ingestion and CI/CD deployment remain planned.
 
 ## 1. Business Problem and Objectives
 
@@ -191,6 +193,14 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
   - Available capability where applicable.
   - Forecast generation for variable sources such as wind and solar instead of capability where specified.
 
+#### Milestone 6 dated hourly batch
+
+- Use delivery-date-specific files. Keep the original day-ahead CSV and generator XML in a content-addressed ADLS archive. Prepare normalized CSV for both sources, preserving unavailable generator output as null and keeping capability, renewable forecast, and available capacity separate.
+- `pl_ieso_hourly_batch` collects both feeds before starting `ieso_m6_hourly`. The job reads the prepared ADLS files directly. The existing real-time feeds continue through Event Hubs.
+- Keep accepted revisions in Bronze. Silver and Gold use the latest report snapshot by IESO creation timestamp for each date. Replaying the same bytes does not duplicate Bronze records or replace a newer snapshot.
+- Publish the hourly spreads only when a location-hour has a day-ahead price and all 12 real-time intervals. Publish the hourly Ontario Demand average only when all 12 demand intervals are present. Reported generator output covers the facilities included in the source report.
+- Keep the new pipeline manual while measuring coverage and cost. See section 5 for the cadence proposal.
+
 ### 3.5 Historical Generator Output and Capability (CSV) (Backup)
 
 - Official report: Monthly Generator Output and Capability Data.
@@ -268,9 +278,8 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
   - `pl_ieso_reconciliation`: Scheduled checks for missed or revised source reports.
 - **Preferred option for evaluation: one batch every two days for real-time LMP and Ontario Demand.** In one ADF batch, collect and archive the dated hourly IESO reports since the last successful collection, check for gaps, and preserve the five-minute observations. Publish to Event Hubs and start Databricks processing in the same batch, within the current 24-hour retention window. When Power BI is added, refresh it after Gold succeeds.
 - Keep Milestone 5 Gold runs manual. Decide the final interval in Milestone 7 after researching source availability and dashboard freshness needs, and measuring the coverage, runtime, and Azure cost of a representative two-day batch.
-- Tentative timing for later feeds:
-  - Generator report collection every five to ten minutes once added.
-  - Day-ahead report collection near expected publication, with daily reconciliation.
+- Tentative timings for later scheduling research:
+  - Evaluate collecting completed dated generator reports and the matching day-ahead delivery-date report in the same batch. Measure publication lag and check for source revisions before setting a schedule.
 - Use cost-conscious incremental Spark processing where practical instead of running Databricks compute continuously.
 
 ## 6. Data Quality, Monitoring, and Recovery
