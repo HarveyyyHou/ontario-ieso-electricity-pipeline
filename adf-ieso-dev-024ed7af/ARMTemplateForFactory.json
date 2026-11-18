@@ -595,6 +595,159 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/pl_ieso_hourly_batch')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "collect_da_lmp",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.00:05:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"da_lmp\",\"delivery_date\":\"', pipeline().parameters.delivery_date, '\",\"replay_sha\":\"', pipeline().parameters.da_lmp_replay_sha, '\"}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "collect_generator",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.00:05:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"generator\",\"delivery_date\":\"', pipeline().parameters.delivery_date, '\",\"replay_sha\":\"', pipeline().parameters.generator_replay_sha, '\"}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "run_hourly_databricks",
+						"type": "DatabricksJob",
+						"dependsOn": [
+							{
+								"activity": "collect_da_lmp",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "collect_generator",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:25:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"jobId": {
+								"value": "@pipeline().parameters.databricks_job_id",
+								"type": "Expression"
+							},
+							"jobParameters": {
+								"delivery_date": {
+									"value": "@pipeline().parameters.delivery_date",
+									"type": "Expression"
+								},
+								"da_report": {
+									"value": "@string(activity('collect_da_lmp').output.report)",
+									"type": "Expression"
+								},
+								"generator_report": {
+									"value": "@string(activity('collect_generator').output.report)",
+									"type": "Expression"
+								},
+								"adf_run_id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_databricks",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"concurrency": 1,
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"delivery_date": {
+						"type": "String"
+					},
+					"databricks_job_id": {
+						"type": "String"
+					},
+					"da_lmp_replay_sha": {
+						"type": "String"
+					},
+					"generator_replay_sha": {
+						"type": "String"
+					}
+				},
+				"annotations": [
+					"manual",
+					"milestone6"
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_ingest_function')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_databricks')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ls_ieso_databricks')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
