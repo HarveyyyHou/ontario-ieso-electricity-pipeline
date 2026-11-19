@@ -796,7 +796,7 @@
 						"typeProperties": {
 							"functionName": "collect_ieso",
 							"body": {
-								"value": "\n@concat('{\"source\":\"m7_control\",\"action\":\"start\"', ',\"start_date\":', substring(string(array(pipeline().parameters.start_date)), 1, sub(length(string(array(pipeline().parameters.start_date))), 2)), ',\"end_date\":', substring(string(array(pipeline().parameters.end_date)), 1, sub(length(string(array(pipeline().parameters.end_date))), 2)), ',\"refresh_token\":', substring(string(array(pipeline().parameters.refresh_token)), 1, sub(length(string(array(pipeline().parameters.refresh_token))), 2)), ',\"delivery_hour\":', string(pipeline().parameters.delivery_hour), ',\"advance_cursor\":', toLower(string(pipeline().parameters.advance_cursor)), ',\"preview_only\":', toLower(string(pipeline().parameters.preview_only)), '}')\n",
+								"value": "@concat('{\"source\":\"m7_control\",\"action\":\"start\"', ',\"start_date\":', substring(string(array(pipeline().parameters.start_date)), 1, sub(length(string(array(pipeline().parameters.start_date))), 2)), ',\"end_date\":', substring(string(array(pipeline().parameters.end_date)), 1, sub(length(string(array(pipeline().parameters.end_date))), 2)), ',\"refresh_token\":', substring(string(array(pipeline().parameters.refresh_token)), 1, sub(length(string(array(pipeline().parameters.refresh_token))), 2)), ',\"delivery_hour\":', string(pipeline().parameters.delivery_hour), ',\"advance_cursor\":', toLower(string(pipeline().parameters.advance_cursor)), ',\"preview_only\":', toLower(string(pipeline().parameters.preview_only)), '}')\n",
 								"type": "Expression"
 							},
 							"headers": {
