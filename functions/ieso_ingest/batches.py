@@ -1,5 +1,6 @@
 """ADF batch planning, resumable collection inventory, and atomic completion progress."""
 
+import code
 import hashlib
 import json
 import logging
@@ -176,9 +177,18 @@ def collect_report(table, archive, plan, task, adf_run_id):
     else:
         request = {"source": source, "delivery_date": day.isoformat()}
         run_collect = hourly.collect
+
     result, code = run_collect(request, archive, records, adf_run_id=adf_run_id)
-    if code != 200 or result.get("status") not in {"archived", "already_archived"}:
+
+    accepted_statuses = (
+        {"prepared", "already_prepared"}
+        if source == "rt_totals"
+        else {"archived", "already_archived"}
+    )
+
+    if code != 200 or result.get("status") not in accepted_statuses:
         return result, code if code != 200 else 422
+
     if source in ("rt_lmp", "rt_totals"):
         record = table.get_entity(result["records_partition"], result["records_row"])
         details = {"record": json_clean(record), "expected_count": int(record["RowCount"])}
