@@ -1,3 +1,4 @@
+
 {
   "name": "tr_ieso_m7_two_day_proposal",
   "properties": {
@@ -18,16 +19,16 @@
           "end_date": {
             "type": "Expression",
             "value": "@string('')"
-          }
-        },
-        "delivery_hour": 0,
-        "advance_cursor": true,
-        "preview_only": false,
-        "refresh_token": {
-          "type": "Expression",
-          "value": "@string('')"
-        },
-        "databricks_job_id": "982629557854815"
+          },
+          "delivery_hour": 0,
+          "advance_cursor": true,
+          "preview_only": false,
+          "refresh_token": {
+            "type": "Expression",
+            "value": "@string('')"
+          },
+          "databricks_job_id": "982629557854815"
+        }
       }
     ],
     "typeProperties": {
