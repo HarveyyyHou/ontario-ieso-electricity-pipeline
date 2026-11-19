@@ -133,7 +133,49 @@ class BatchControlTests(unittest.TestCase):
             self.assertEqual(failure["type"], "Fail")
         child = json.loads((ROOT / "adf/pipeline/pl_ieso_m7_report.json").read_text())
         self.assertEqual(child["properties"]["activities"][1]["typeProperties"]["timeout"], "0.00:20:00")
+    def test_rt_totals_prepared_statuses_are_accepted(self):
+        plan = batches.plan_window({
+            "start_date": "2026-11-12",
+            "delivery_hour": 1
+        })
+        task = next(
+            item for item in plan["tasks"]
+            if item["source"] == "rt_totals"
+        )
 
+        for status in ("prepared", "already_prepared"):
+            with self.subTest(status=status):
+                table = Table()
+                table.create_entity({
+                    "PartitionKey": "rt_totals_v1",
+                    "RowKey": "test-report",
+                    "RowCount": 12
+                })
+
+                fixture = {
+                    "status": status,
+                    "records_partition": "rt_totals_v1",
+                    "records_row": "test-report"
+                }
+
+                with patch.object(
+                    batches.totals,
+                    "collect",
+                    return_value=(fixture, 200)
+                ):
+                    result, code = batches.collect_report(
+                        table, Archive(), plan, task, "adf"
+                    )
+
+                self.assertEqual(code, 200)
+                self.assertEqual(result["status"], status)
+                self.assertEqual(result["rows"], 12)
+
+                saved = table.get_entity(
+                    plan["batch_id"], task["key"]
+                )
+                self.assertFalse(saved["Published"])
+                self.assertEqual(saved["Rows"], 12)
 
 @unittest.skipUnless(os.environ.get("IESO_M4_DELTA_JARS"), "requires local Spark and Delta jars")
 class SparkRecoveryTests(unittest.TestCase):
