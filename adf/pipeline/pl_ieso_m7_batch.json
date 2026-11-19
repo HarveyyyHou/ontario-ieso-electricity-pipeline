@@ -1,124 +1,125 @@
 {
-  "name": "pl_ieso_m7_batch",
-  "properties": {
-    "concurrency": 1,
-    "parameters": {
-      "start_date": {
-        "type": "String",
-        "defaultValue": ""
-      },
-      "end_date": {
-        "type": "String",
-        "defaultValue": ""
-      },
-      "delivery_hour": {
-        "type": "Int",
-        "defaultValue": 0
-      },
-      "advance_cursor": {
-        "type": "Bool",
-        "defaultValue": false
-      },
-      "preview_only": {
-        "type": "Bool",
-        "defaultValue": true
-      },
-      "refresh_token": {
-        "type": "String",
-        "defaultValue": ""
-      },
-      "databricks_job_id": {
-        "type": "String",
-        "defaultValue": ""
-      }
-    },
-    "activities": [
-      {
-        "name": "plan_batch",
-        "type": "AzureFunctionActivity",
-        "dependsOn": [],
-        "policy": {
-          "timeout": "0.00:05:00",
-          "retry": 0,
-          "retryIntervalInSeconds": 30,
-          "secureInput": false,
-          "secureOutput": false
-        },
-        "linkedServiceName": {
-          "referenceName": "ls_ieso_ingest_function",
-          "type": "LinkedServiceReference"
-        },
-        "typeProperties": {
-          "functionName": "collect_ieso",
-          "method": "POST",
-          "headers": {
-            "Content-Type": "application/json",
-            "x-adf-run-id": {
-              "value": "@pipeline().RunId",
-              "type": "Expression"
-            }
-          },
-          "body": {
-            "value": "@concat('{\"source\":\"m7_control\",\"action\":\"start\"', ',\"start_date\":', substring(string(array(pipeline().parameters.start_date)), 1, sub(length(string(array(pipeline().parameters.start_date))), 2)), ',\"end_date\":', substring(string(array(pipeline().parameters.end_date)), 1, sub(length(string(array(pipeline().parameters.end_date))), 2)), ',\"refresh_token\":', substring(string(array(pipeline().parameters.refresh_token)), 1, sub(length(string(array(pipeline().parameters.refresh_token))), 2)), ',\"delivery_hour\":', string(pipeline().parameters.delivery_hour), ',\"advance_cursor\":', string(pipeline().parameters.advance_cursor), ',\"preview_only\":', string(pipeline().parameters.preview_only), '}')",
-            "type": "Expression"
-          }
-        }
-      },
-      {
-        "name": "if_work_needed",
-        "type": "IfCondition",
-        "dependsOn": [
-          {
-            "activity": "plan_batch",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "typeProperties": {
-          "expression": {
-            "value": "@not(activity('plan_batch').output.already_complete)",
-            "type": "Expression"
-          },
-          "ifTrueActivities": [
-            {
-              "name": "execute_batch",
-              "type": "ExecutePipeline",
-              "dependsOn": [],
-              "typeProperties": {
-                "pipeline": {
-                  "referenceName": "pl_ieso_m7_execute",
-                  "type": "PipelineReference"
-                },
-                "waitOnCompletion": true,
-                "parameters": {
-                  "batch_id": {
-                    "value": "@activity('plan_batch').output.batch_id",
-                    "type": "Expression"
-                  },
-                  "tasks": {
-                    "value": "@activity('plan_batch').output.tasks",
-                    "type": "Expression"
-                  },
-                  "databricks_job_id": {
-                    "value": "@pipeline().parameters.databricks_job_id",
-                    "type": "Expression"
-                  },
-                  "parent_run_id": {
-                    "value": "@pipeline().RunId",
-                    "type": "Expression"
-                  }
-                }
-              }
-            }
-          ],
-          "ifFalseActivities": []
-        }
-      }
-    ],
-    "annotations": [
-      "milestone7",
-      "manual-until-cost-reviewed"
-    ]
-  }
+	"name": "pl_ieso_m7_batch",
+	"properties": {
+		"activities": [
+			{
+				"name": "plan_batch",
+				"type": "AzureFunctionActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:05:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"functionName": "collect_ieso",
+					"body": {
+						"value": "\n@concat('{\"source\":\"m7_control\",\"action\":\"start\"', ',\"start_date\":', substring(string(array(pipeline().parameters.start_date)), 1, sub(length(string(array(pipeline().parameters.start_date))), 2)), ',\"end_date\":', substring(string(array(pipeline().parameters.end_date)), 1, sub(length(string(array(pipeline().parameters.end_date))), 2)), ',\"refresh_token\":', substring(string(array(pipeline().parameters.refresh_token)), 1, sub(length(string(array(pipeline().parameters.refresh_token))), 2)), ',\"delivery_hour\":', string(pipeline().parameters.delivery_hour), ',\"advance_cursor\":', toLower(string(pipeline().parameters.advance_cursor)), ',\"preview_only\":', toLower(string(pipeline().parameters.preview_only)), '}')\n",
+						"type": "Expression"
+					},
+					"headers": {
+						"Content-Type": "application/json",
+						"x-adf-run-id": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					},
+					"method": "POST"
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_ieso_ingest_function",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "if_work_needed",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "plan_batch",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(activity('plan_batch').output.already_complete)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "execute_batch",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_ieso_m7_execute",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"batch_id": {
+										"value": "@activity('plan_batch').output.batch_id",
+										"type": "Expression"
+									},
+									"tasks": {
+										"value": "@activity('plan_batch').output.tasks",
+										"type": "Expression"
+									},
+									"databricks_job_id": {
+										"value": "@pipeline().parameters.databricks_job_id",
+										"type": "Expression"
+									},
+									"parent_run_id": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"concurrency": 1,
+		"parameters": {
+			"start_date": {
+				"type": "String"
+			},
+			"end_date": {
+				"type": "String"
+			},
+			"delivery_hour": {
+				"type": "Int",
+				"defaultValue": 0
+			},
+			"advance_cursor": {
+				"type": "Bool",
+				"defaultValue": false
+			},
+			"preview_only": {
+				"type": "Bool",
+				"defaultValue": true
+			},
+			"refresh_token": {
+				"type": "String"
+			},
+			"databricks_job_id": {
+				"type": "String"
+			}
+		},
+		"annotations": [
+			"milestone7",
+			"manual-until-cost-reviewed"
+		]
+	}
 }
