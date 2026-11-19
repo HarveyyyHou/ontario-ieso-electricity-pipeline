@@ -1,203 +1,219 @@
 {
-  "name": "pl_ieso_m7_report",
-  "properties": {
-    "parameters": {
-      "batch_id": {
-        "type": "String"
-      },
-      "task_key": {
-        "type": "String"
-      },
-      "parent_run_id": {
-        "type": "String"
-      }
-    },
-    "variables": {
-      "complete": {
-        "type": "Bool",
-        "defaultValue": false
-      },
-      "failed": {
-        "type": "Bool",
-        "defaultValue": false
-      }
-    },
-    "activities": [
-      {
-        "name": "collect_report",
-        "type": "AzureFunctionActivity",
-        "dependsOn": [],
-        "policy": {
-          "timeout": "0.00:05:00",
-          "retry": 1,
-          "retryIntervalInSeconds": 30,
-          "secureInput": false,
-          "secureOutput": false
-        },
-        "linkedServiceName": {
-          "referenceName": "ls_ieso_ingest_function",
-          "type": "LinkedServiceReference"
-        },
-        "typeProperties": {
-          "functionName": "collect_ieso",
-          "method": "POST",
-          "headers": {
-            "Content-Type": "application/json",
-            "x-adf-run-id": {
-              "value": "@pipeline().parameters.parent_run_id",
-              "type": "Expression"
-            }
-          },
-          "body": {
-            "value": "@concat('{\"source\":\"m7_control\",\"action\":\"collect\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"task_key\":', substring(string(array(pipeline().parameters.task_key)), 1, sub(length(string(array(pipeline().parameters.task_key))), 2)), '}')",
-            "type": "Expression"
-          }
-        }
-      },
-      {
-        "name": "publish_until_complete",
-        "type": "Until",
-        "dependsOn": [
-          {
-            "activity": "collect_report",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "typeProperties": {
-          "expression": {
-            "value": "@or(variables('complete'), variables('failed'))",
-            "type": "Expression"
-          },
-          "timeout": "0.00:20:00",
-          "activities": [
-            {
-              "name": "publish_chunk",
-              "type": "AzureFunctionActivity",
-              "dependsOn": [],
-              "policy": {
-                "timeout": "0.00:05:00",
-                "retry": 0,
-                "retryIntervalInSeconds": 30,
-                "secureInput": false,
-                "secureOutput": false
-              },
-              "linkedServiceName": {
-                "referenceName": "ls_ieso_ingest_function",
-                "type": "LinkedServiceReference"
-              },
-              "typeProperties": {
-                "functionName": "collect_ieso",
-                "method": "POST",
-                "headers": {
-                  "Content-Type": "application/json",
-                  "x-adf-run-id": {
-                    "value": "@pipeline().parameters.parent_run_id",
-                    "type": "Expression"
-                  }
-                },
-                "body": {
-                  "value": "@concat('{\"source\":\"m7_control\",\"action\":\"publish\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"task_key\":', substring(string(array(pipeline().parameters.task_key)), 1, sub(length(string(array(pipeline().parameters.task_key))), 2)), '}')",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "check_publication",
-              "type": "IfCondition",
-              "dependsOn": [
-                {
-                  "activity": "publish_chunk",
-                  "dependencyConditions": [
-                    "Completed"
-                  ]
-                }
-              ],
-              "typeProperties": {
-                "expression": {
-                  "value": "@equals(activity('publish_chunk').Status, 'Succeeded')",
-                  "type": "Expression"
-                },
-                "ifTrueActivities": [
-                  {
-                    "name": "remember_complete",
-                    "type": "SetVariable",
-                    "dependsOn": [],
-                    "typeProperties": {
-                      "variableName": "complete",
-                      "value": {
-                        "value": "@equals(activity('publish_chunk').output.complete, true)",
-                        "type": "Expression"
-                      }
-                    }
-                  }
-                ],
-                "ifFalseActivities": [
-                  {
-                    "name": "remember_failure",
-                    "type": "SetVariable",
-                    "dependsOn": [],
-                    "typeProperties": {
-                      "variableName": "failed",
-                      "value": true
-                    }
-                  }
-                ]
-              }
-            },
-            {
-              "name": "pace_publication",
-              "type": "Wait",
-              "dependsOn": [
-                {
-                  "activity": "check_publication",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "typeProperties": {
-                "waitTimeInSeconds": 1
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "require_publication",
-        "type": "IfCondition",
-        "dependsOn": [
-          {
-            "activity": "publish_until_complete",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "typeProperties": {
-          "expression": {
-            "value": "@and(variables('complete'), not(variables('failed')))",
-            "type": "Expression"
-          },
-          "ifTrueActivities": [],
-          "ifFalseActivities": [
-            {
-              "name": "publication_failed",
-              "type": "Fail",
-              "dependsOn": [],
-              "typeProperties": {
-                "message": "Publication failed. Inspect publish_chunk output.",
-                "errorCode": "IESO_M7_FAILED"
-              }
-            }
-          ]
-        }
-      }
-    ],
-    "annotations": [
-      "milestone7",
-      "manual-child"
-    ]
-  }
+	"name": "pl_ieso_m7_report",
+	"properties": {
+		"activities": [
+			{
+				"name": "collect_report",
+				"type": "AzureFunctionActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:05:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"functionName": "collect_ieso",
+					"body": {
+						"value": "@concat('{\"source\":\"m7_control\",\"action\":\"collect\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"task_key\":', substring(string(array(pipeline().parameters.task_key)), 1, sub(length(string(array(pipeline().parameters.task_key))), 2)), '}')",
+						"type": "Expression"
+					},
+					"headers": {
+						"Content-Type": "application/json",
+						"x-adf-run-id": {
+							"value": "@pipeline().parameters.parent_run_id",
+							"type": "Expression"
+						}
+					},
+					"method": "POST"
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_ieso_ingest_function",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "publish_until_complete",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "collect_report",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(variables('complete'), variables('failed'))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "publish_chunk",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.00:05:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "collect_ieso",
+								"body": {
+									"value": "@concat('{\"source\":\"m7_control\",\"action\":\"publish\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"task_key\":', substring(string(array(pipeline().parameters.task_key)), 1, sub(length(string(array(pipeline().parameters.task_key))), 2)), '}')",
+									"type": "Expression"
+								},
+								"headers": {
+									"Content-Type": "application/json",
+									"x-adf-run-id": {
+										"value": "@pipeline().parameters.parent_run_id",
+										"type": "Expression"
+									}
+								},
+								"method": "POST"
+							},
+							"linkedServiceName": {
+								"referenceName": "ls_ieso_ingest_function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "check_publication",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "publish_chunk",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(activity('publish_chunk').Status, 'Succeeded')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "remember_failure",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "failed",
+											"value": true
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "remember_complete",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "complete",
+											"value": {
+												"value": "@equals(activity('publish_chunk').output.complete, true)",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "pace_publication",
+							"type": "Wait",
+							"dependsOn": [
+								{
+									"activity": "check_publication",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						}
+					],
+					"timeout": "0.00:20:00"
+				}
+			},
+			{
+				"name": "require_publication",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "publish_until_complete",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(variables('complete'), not(variables('failed')))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "publication_failed",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Publication failed. Inspect publish_chunk output.",
+								"errorCode": "IESO_M7_FAILED"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"batch_id": {
+				"type": "String"
+			},
+			"task_key": {
+				"type": "String"
+			},
+			"parent_run_id": {
+				"type": "String"
+			}
+		},
+		"variables": {
+			"complete": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"failed": {
+				"type": "Boolean",
+				"defaultValue": false
+			}
+		},
+		"annotations": [
+			"milestone7",
+			"manual-child"
+		]
+	}
 }
