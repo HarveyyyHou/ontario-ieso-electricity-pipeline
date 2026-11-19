@@ -1,0 +1,57 @@
+bundle:
+  name: ieso-milestone7
+
+sync:
+  include:
+    - run.py
+    - runtime.b64
+  exclude:
+    - __pycache__/**
+
+variables:
+  job_runner_application_id:
+    description: Application ID of the existing Databricks Run as service principal.
+  source_revision:
+    description: Full reviewed main commit used to build the runtime.
+
+permissions:
+  - service_principal_name: ${var.job_runner_application_id}
+    level: CAN_VIEW
+
+run_as:
+  service_principal_name: ${var.job_runner_application_id}
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: https://adb-7405605219777405.5.azuredatabricks.net
+
+resources:
+  jobs:
+    ieso_m7_batch:
+      name: ieso_m7_batch
+      performance_target: STANDARD
+      max_concurrent_runs: 1
+      timeout_seconds: 1800
+      queue:
+        enabled: false
+      tags:
+        project: ieso
+        milestone: "7"
+      parameters:
+        - name: batch_id
+          default: ""
+        - name: inventory_sha256
+          default: ""
+        - name: adf_run_id
+          default: ""
+      tasks:
+        - task_key: process_window
+          max_retries: 0
+          notebook_task:
+            notebook_path: ./run.py
+            base_parameters:
+              repo_root: ${workspace.file_path}
+              source_revision: ${var.source_revision}
+              job_run_id: "{{job.run_id}}"
