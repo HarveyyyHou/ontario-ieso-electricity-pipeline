@@ -19,6 +19,34 @@
 			"type": "string",
 			"defaultValue": "https://func-ieso-ingest-dev-024ed7af.azurewebsites.net"
 		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_start_date": {
+			"type": "string",
+			"defaultValue": "auto"
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_end_date": {
+			"type": "string",
+			"defaultValue": "@string('')"
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_delivery_hour": {
+			"type": "int",
+			"defaultValue": 0
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_advance_cursor": {
+			"type": "bool",
+			"defaultValue": true
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_preview_only": {
+			"type": "bool",
+			"defaultValue": false
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_refresh_token": {
+			"type": "string",
+			"defaultValue": "@string('')"
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_databricks_job_id": {
+			"type": "string",
+			"defaultValue": "982629557854815"
+		},
 		"containerUri": {
 			"type": "string",
 			"metadata": "URI to storage account containing linked ARM templates"
@@ -54,6 +82,27 @@
 					},
 					"ls_ieso_publish_function_properties_typeProperties_functionAppUrl": {
 						"value": "[parameters('ls_ieso_publish_function_properties_typeProperties_functionAppUrl')]"
+					},
+					"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_start_date": {
+						"value": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_start_date')]"
+					},
+					"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_end_date": {
+						"value": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_end_date')]"
+					},
+					"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_delivery_hour": {
+						"value": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_delivery_hour')]"
+					},
+					"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_advance_cursor": {
+						"value": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_advance_cursor')]"
+					},
+					"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_preview_only": {
+						"value": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_preview_only')]"
+					},
+					"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_refresh_token": {
+						"value": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_refresh_token')]"
+					},
+					"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_databricks_job_id": {
+						"value": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_databricks_job_id')]"
 					}
 				}
 			},

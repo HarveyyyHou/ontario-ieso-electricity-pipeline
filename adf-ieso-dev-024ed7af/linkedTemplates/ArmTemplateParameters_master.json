@@ -14,6 +14,27 @@
 		"ls_ieso_publish_function_properties_typeProperties_functionAppUrl": {
 			"value": "https://func-ieso-ingest-dev-024ed7af.azurewebsites.net"
 		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_start_date": {
+			"value": "auto"
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_end_date": {
+			"value": "@string('')"
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_delivery_hour": {
+			"value": 0
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_advance_cursor": {
+			"value": true
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_preview_only": {
+			"value": false
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_refresh_token": {
+			"value": "@string('')"
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_databricks_job_id": {
+			"value": "982629557854815"
+		},
 		"containerUri": {
 			"value": ""
 		},

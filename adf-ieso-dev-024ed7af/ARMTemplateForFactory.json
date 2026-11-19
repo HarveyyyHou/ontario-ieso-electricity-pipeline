@@ -18,6 +18,34 @@
 		"ls_ieso_publish_function_properties_typeProperties_functionAppUrl": {
 			"type": "string",
 			"defaultValue": "https://func-ieso-ingest-dev-024ed7af.azurewebsites.net"
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_start_date": {
+			"type": "string",
+			"defaultValue": "auto"
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_end_date": {
+			"type": "string",
+			"defaultValue": "@string('')"
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_delivery_hour": {
+			"type": "int",
+			"defaultValue": 0
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_advance_cursor": {
+			"type": "bool",
+			"defaultValue": true
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_preview_only": {
+			"type": "bool",
+			"defaultValue": false
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_refresh_token": {
+			"type": "string",
+			"defaultValue": "@string('')"
+		},
+		"tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_databricks_job_id": {
+			"type": "string",
+			"defaultValue": "982629557854815"
 		}
 	},
 	"variables": {
@@ -748,6 +776,793 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/pl_ieso_m7_batch')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "plan_batch",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.00:05:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"m7_control\",\"action\":\"start\"', ',\"start_date\":', substring(string(array(pipeline().parameters.start_date)), 1, sub(length(string(array(pipeline().parameters.start_date))), 2)), ',\"end_date\":', substring(string(array(pipeline().parameters.end_date)), 1, sub(length(string(array(pipeline().parameters.end_date))), 2)), ',\"refresh_token\":', substring(string(array(pipeline().parameters.refresh_token)), 1, sub(length(string(array(pipeline().parameters.refresh_token))), 2)), ',\"delivery_hour\":', string(pipeline().parameters.delivery_hour), ',\"advance_cursor\":', string(pipeline().parameters.advance_cursor), ',\"preview_only\":', string(pipeline().parameters.preview_only), '}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "if_work_needed",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "plan_batch",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@not(activity('plan_batch').output.already_complete)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "execute_batch",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pl_ieso_m7_execute",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"batch_id": {
+												"value": "@activity('plan_batch').output.batch_id",
+												"type": "Expression"
+											},
+											"tasks": {
+												"value": "@activity('plan_batch').output.tasks",
+												"type": "Expression"
+											},
+											"databricks_job_id": {
+												"value": "@pipeline().parameters.databricks_job_id",
+												"type": "Expression"
+											},
+											"parent_run_id": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					}
+				],
+				"concurrency": 1,
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"start_date": {
+						"type": "String"
+					},
+					"end_date": {
+						"type": "String"
+					},
+					"delivery_hour": {
+						"type": "Int",
+						"defaultValue": 0
+					},
+					"advance_cursor": {
+						"type": "Bool",
+						"defaultValue": false
+					},
+					"preview_only": {
+						"type": "Bool",
+						"defaultValue": true
+					},
+					"refresh_token": {
+						"type": "String"
+					},
+					"databricks_job_id": {
+						"type": "String"
+					}
+				},
+				"annotations": [
+					"milestone7",
+					"manual-until-cost-reviewed"
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_ingest_function')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_ieso_m7_execute')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_ieso_m7_execute')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "collect_reports",
+						"type": "ForEach",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@pipeline().parameters.tasks",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "run_report",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pl_ieso_m7_report",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"batch_id": {
+												"value": "@pipeline().parameters.batch_id",
+												"type": "Expression"
+											},
+											"task_key": {
+												"value": "@item().key",
+												"type": "Expression"
+											},
+											"parent_run_id": {
+												"value": "@pipeline().parameters.parent_run_id",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "seal_inventory",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [
+							{
+								"activity": "collect_reports",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:05:00",
+							"retry": 1,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"m7_control\",\"action\":\"seal\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), '}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().parameters.parent_run_id",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "process_window",
+						"type": "DatabricksJob",
+						"dependsOn": [
+							{
+								"activity": "seal_inventory",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:40:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"jobId": {
+								"value": "@pipeline().parameters.databricks_job_id",
+								"type": "Expression"
+							},
+							"jobParameters": {
+								"batch_id": {
+									"value": "@pipeline().parameters.batch_id",
+									"type": "Expression"
+								},
+								"inventory_sha256": {
+									"value": "@activity('seal_inventory').output.inventory_sha256",
+									"type": "Expression"
+								},
+								"adf_run_id": {
+									"value": "@pipeline().parameters.parent_run_id",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_databricks",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "complete_batch",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [
+							{
+								"activity": "process_window",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:05:00",
+							"retry": 1,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"m7_control\",\"action\":\"complete\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"spark_output\":', string(activity('process_window').output), '}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().parameters.parent_run_id",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "log_failed_collect_reports",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [
+							{
+								"activity": "collect_reports",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:05:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"m7_control\",\"action\":\"failed\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"stage\":', '\"collect_reports\"', '}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().parameters.parent_run_id",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "fail_collect_reports",
+						"type": "Fail",
+						"dependsOn": [
+							{
+								"activity": "log_failed_collect_reports",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"message": "M7 collect_reports failed. Inspect its activity output and the batch records.",
+							"errorCode": "IESO_M7_FAILED"
+						}
+					},
+					{
+						"name": "log_failed_seal_inventory",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [
+							{
+								"activity": "seal_inventory",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:05:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"m7_control\",\"action\":\"failed\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"stage\":', '\"seal_inventory\"', '}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().parameters.parent_run_id",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "fail_seal_inventory",
+						"type": "Fail",
+						"dependsOn": [
+							{
+								"activity": "log_failed_seal_inventory",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"message": "M7 seal_inventory failed. Inspect its activity output and the batch records.",
+							"errorCode": "IESO_M7_FAILED"
+						}
+					},
+					{
+						"name": "log_failed_process_window",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [
+							{
+								"activity": "process_window",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:05:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"m7_control\",\"action\":\"failed\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"stage\":', '\"process_window\"', '}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().parameters.parent_run_id",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "fail_process_window",
+						"type": "Fail",
+						"dependsOn": [
+							{
+								"activity": "log_failed_process_window",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"message": "M7 process_window failed. Inspect its activity output and the batch records.",
+							"errorCode": "IESO_M7_FAILED"
+						}
+					},
+					{
+						"name": "log_failed_complete_batch",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [
+							{
+								"activity": "complete_batch",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:05:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"m7_control\",\"action\":\"failed\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"stage\":', '\"complete_batch\"', '}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().parameters.parent_run_id",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "fail_complete_batch",
+						"type": "Fail",
+						"dependsOn": [
+							{
+								"activity": "log_failed_complete_batch",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"message": "M7 complete_batch failed. Inspect its activity output and the batch records.",
+							"errorCode": "IESO_M7_FAILED"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"batch_id": {
+						"type": "String"
+					},
+					"tasks": {
+						"type": "Array"
+					},
+					"databricks_job_id": {
+						"type": "String"
+					},
+					"parent_run_id": {
+						"type": "String"
+					}
+				},
+				"annotations": [
+					"milestone7",
+					"child-workflow"
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_ingest_function')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_databricks')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_ieso_m7_report')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_ieso_m7_report')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "collect_report",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.00:05:00",
+							"retry": 1,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "collect_ieso",
+							"body": {
+								"value": "@concat('{\"source\":\"m7_control\",\"action\":\"collect\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"task_key\":', substring(string(array(pipeline().parameters.task_key)), 1, sub(length(string(array(pipeline().parameters.task_key))), 2)), '}')",
+								"type": "Expression"
+							},
+							"headers": {
+								"Content-Type": "application/json",
+								"x-adf-run-id": {
+									"value": "@pipeline().parameters.parent_run_id",
+									"type": "Expression"
+								}
+							},
+							"method": "POST"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_ieso_ingest_function",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "publish_until_complete",
+						"type": "Until",
+						"dependsOn": [
+							{
+								"activity": "collect_report",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@or(variables('complete'), variables('failed'))",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "publish_chunk",
+									"type": "AzureFunctionActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:05:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"functionName": "collect_ieso",
+										"body": {
+											"value": "@concat('{\"source\":\"m7_control\",\"action\":\"publish\"', ',\"batch_id\":', substring(string(array(pipeline().parameters.batch_id)), 1, sub(length(string(array(pipeline().parameters.batch_id))), 2)), ',\"task_key\":', substring(string(array(pipeline().parameters.task_key)), 1, sub(length(string(array(pipeline().parameters.task_key))), 2)), '}')",
+											"type": "Expression"
+										},
+										"headers": {
+											"Content-Type": "application/json",
+											"x-adf-run-id": {
+												"value": "@pipeline().parameters.parent_run_id",
+												"type": "Expression"
+											}
+										},
+										"method": "POST"
+									},
+									"linkedServiceName": {
+										"referenceName": "ls_ieso_ingest_function",
+										"type": "LinkedServiceReference"
+									}
+								},
+								{
+									"name": "check_publication",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "publish_chunk",
+											"dependencyConditions": [
+												"Completed"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@equals(activity('publish_chunk').Status, 'Succeeded')",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "remember_failure",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"policy": {
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "failed",
+													"value": true
+												}
+											}
+										],
+										"ifTrueActivities": [
+											{
+												"name": "remember_complete",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"policy": {
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "complete",
+													"value": {
+														"value": "@equals(activity('publish_chunk').output.complete, true)",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								},
+								{
+									"name": "pace_publication",
+									"type": "Wait",
+									"dependsOn": [
+										{
+											"activity": "check_publication",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"waitTimeInSeconds": 1
+									}
+								}
+							],
+							"timeout": "0.00:20:00"
+						}
+					},
+					{
+						"name": "require_publication",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "publish_until_complete",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@and(variables('complete'), not(variables('failed')))",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "publication_failed",
+									"type": "Fail",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"message": "Publication failed. Inspect publish_chunk output.",
+										"errorCode": "IESO_M7_FAILED"
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"batch_id": {
+						"type": "String"
+					},
+					"task_key": {
+						"type": "String"
+					},
+					"parent_run_id": {
+						"type": "String"
+					}
+				},
+				"variables": {
+					"complete": {
+						"type": "Boolean",
+						"defaultValue": false
+					},
+					"failed": {
+						"type": "Boolean",
+						"defaultValue": false
+					}
+				},
+				"annotations": [
+					"milestone7",
+					"manual-child"
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_ingest_function')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ls_ieso_databricks')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -821,6 +1636,53 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_ieso_keyvault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/tr_ieso_m7_two_day_proposal')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [
+					"proposal",
+					"review-cost-and-start-time-before-activation"
+				],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_ieso_m7_batch",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"start_date": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_start_date')]",
+							"end_date": {
+								"type": "Expression",
+								"value": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_end_date')]"
+							},
+							"delivery_hour": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_delivery_hour')]",
+							"advance_cursor": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_advance_cursor')]",
+							"preview_only": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_preview_only')]",
+							"refresh_token": {
+								"type": "Expression",
+								"value": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_refresh_token')]"
+							},
+							"databricks_job_id": "[parameters('tr_ieso_m7_two_day_proposal_properties_pl_ieso_m7_batch_parameters_databricks_job_id')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 2,
+						"startTime": "2026-12-01T12:00:00Z",
+						"timeZone": "UTC"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_ieso_m7_batch')]"
 			]
 		}
 	]
