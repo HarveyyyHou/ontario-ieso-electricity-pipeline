@@ -17,3 +17,7 @@ publish.config.json
 
 # Generated Databricks worker dependency
 databricks/milestone4/ieso_m4_pydeps.b64
+
+# Generated Milestone 7 Serverless runtime
+databricks/milestone7/runtime.b64
+

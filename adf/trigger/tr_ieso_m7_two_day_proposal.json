@@ -1,0 +1,36 @@
+{
+  "name": "tr_ieso_m7_two_day_proposal",
+  "properties": {
+    "runtimeState": "Stopped",
+    "type": "ScheduleTrigger",
+    "annotations": [
+      "proposal",
+      "review-cost-and-start-time-before-activation"
+    ],
+    "pipelines": [
+      {
+        "pipelineReference": {
+          "referenceName": "pl_ieso_m7_batch",
+          "type": "PipelineReference"
+        },
+        "parameters": {
+          "start_date": "auto",
+          "end_date": "",
+          "delivery_hour": 0,
+          "advance_cursor": true,
+          "preview_only": false,
+          "refresh_token": "",
+          "databricks_job_id": ""
+        }
+      }
+    ],
+    "typeProperties": {
+      "recurrence": {
+        "frequency": "Day",
+        "interval": 2,
+        "startTime": "2026-12-01T12:00:00Z",
+        "timeZone": "UTC"
+      }
+    }
+  }
+}

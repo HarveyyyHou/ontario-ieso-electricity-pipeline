@@ -13,6 +13,7 @@ from collector import BlobArchive, IngestionRecords, collect, request_options
 import totals
 import hourly
 import publisher
+import batches
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 logging.getLogger("azure").setLevel(logging.WARNING)
@@ -24,7 +25,9 @@ def collect_ieso(req: func.HttpRequest) -> func.HttpResponse:
     try:
         body = req.get_json()
         source = body.get("source") if isinstance(body, dict) else None
-        if source == "rt_totals":
+        if source == "m7_control":
+            batches.validate(body)
+        elif source == "rt_totals":
             totals.request_options(body)
         elif source == "rt_lmp":
             request_options(body)
@@ -54,8 +57,15 @@ def collect_ieso(req: func.HttpRequest) -> func.HttpResponse:
                 connection_timeout=5, read_timeout=10))
             collect_source = {"rt_totals": totals.collect, "da_lmp": hourly.collect,
                               "generator": hourly.collect}.get(source, collect)
-            result, code = collect_source(body, BlobArchive(blobs.get_container_client(container)),
-                                          IngestionRecords(table, source=source), adf_run_id=adf_run_id)
+            if source == "m7_control":
+                try:
+                    result, code = batches.dispatch(body, blobs.get_container_client(container),
+                                                    table, credential, adf_run_id)
+                except ValueError as exc:
+                    result, code = {"status": "failed", "stage": body["action"], "error": str(exc)}, 400
+            else:
+                result, code = collect_source(body, BlobArchive(blobs.get_container_client(container)),
+                                              IngestionRecords(table, source=source), adf_run_id=adf_run_id)
             result["container"] = container
         return func.HttpResponse(json.dumps(result), status_code=code, mimetype="application/json")
     except Exception:

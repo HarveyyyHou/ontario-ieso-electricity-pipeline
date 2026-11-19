@@ -16,7 +16,8 @@ The project focuses on data engineering. Its main goal is to make public electri
 - Milestone 4 adds bounded Serverless Kafka ingestion, typed Delta Silver processing, archive replay, and an optional ADF job activity. Day-ahead LMP and generator output/capability are covered in Milestone 6.
 - Milestone 5 verified the real-time Gold refresh on delivery date 2026-11-12. The manual job reconciled 5,320 real-time price observations and 5 Ontario Demand observations to 288 five-minute slots.
 - Milestone 6 adds a manual dated-file batch for day-ahead LMP and generator output/capability. ADF collects both files before triggering the hourly Databricks job.
-- Recurring ingestion and CI/CD deployment remain planned.
+- Milestone 6 verified 25,632 day-ahead price rows and 4,512 generator rows for 2026-11-12, including 24 generation hours and successful fuel-output reconciliation.
+- Milestone 7 adds resumable report inventories, bounded ADF orchestration, one Serverless processing job per batch, and a stopped two-day schedule proposal.
 
 ## 1. Business Problem and Objectives
 
@@ -281,6 +282,19 @@ GitHub stores code, infrastructure definitions, and deployment configuration.
 - Tentative timings for later scheduling research:
   - Evaluate collecting completed dated generator reports and the matching day-ahead delivery-date report in the same batch. Measure publication lag and check for source revisions before setting a schedule.
 - Use cost-conscious incremental Spark processing where practical instead of running Databricks compute continuously.
+
+### Milestone 7 batch operation
+
+- `pl_ieso_m7_batch` plans the window. `pl_ieso_m7_execute` coordinates report collection and the single Databricks job. `pl_ieso_m7_report` collects and publishes each report with persistent progress. Use the parent pipeline as the entry point.
+- Preview mode is the default. It returns the planned dates and report count without collecting sources or starting Spark.
+- A manual acceptance run can select one delivery hour and both daily hourly-report files. It keeps the daily cursor untouched.
+- A full manual run accepts one or two completed market dates. Automatic mode accepts at most two new dates and rechecks the previous date for revisions. A two-date manual run plans 100 reports; a three-date run including the revision lookback plans 150. Real-time Totals collection archives both CSV and XML per report.
+- An automatic run needs a daily cursor initialized by a successful full-date batch. The daily cursor and batch success record are committed together in the existing `iesoingestion` table. An interrupted batch retains its accepted report inventory. The same window and refresh token resume it; use a fresh token to deliberately recollect a completed window.
+- Real-time reports are published before Databricks starts. Each batch has its own durable Kafka query checkpoints and staging Delta data under the existing checkpoint volume. Successful Spark runs remove their staging copies after merging them into Bronze; checkpoint and stage-progress records remain available. Kafka data-loss detection remains enabled. If offsets have expired or a published report lacks deliveries, reconcile against the content-addressed archive and record the recovery.
+- Silver and Gold processing reuse the earlier milestone modules. Completed Spark stages are recorded in `ieso_dev.ops.m7_steps`; final run evidence is in `ieso_dev.ops.m7_runs`. A failed required activity propagates failure through ADF.
+- The proposed trigger `tr_ieso_m7_two_day_proposal` is stopped. Its start time and job ID are deployment placeholders to review after measuring a representative window. An acceptance hour does not establish two-day cost, source availability across two days, or unattended scheduling behavior.
+- Automatic progress covers new dates plus one previous date. Older revisions can be checked through an explicit manual window. A backlog greater than two new dates needs additional bounded catch-up batches.
+- Review ADF Monitor, the `m7_control` partition in `iesoingestion`, Application Insights, and the Databricks run output for the correlated batch and run IDs. Scheduled activation follows the measured cost and cadence decision.
 
 ## 6. Data Quality, Monitoring, and Recovery
 
