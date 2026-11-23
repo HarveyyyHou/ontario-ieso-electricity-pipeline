@@ -1,0 +1,144 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "prices_08",
+  "position": {
+    "x": 730,
+    "y": 565,
+    "z": 7000,
+    "height": 330,
+    "width": 690,
+    "tabOrder": 7000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "PriceHourly"
+                    }
+                  },
+                  "Property": "delivery_date"
+                }
+              },
+              "queryRef": "PriceHourly.delivery_date",
+              "nativeQueryRef": "delivery_date"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "PriceHourly"
+                    }
+                  },
+                  "Property": "delivery_hour"
+                }
+              },
+              "queryRef": "PriceHourly.delivery_hour",
+              "nativeQueryRef": "delivery_hour"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "PriceHourly"
+                    }
+                  },
+                  "Property": "pricing_location"
+                }
+              },
+              "queryRef": "PriceHourly.pricing_location",
+              "nativeQueryRef": "pricing_location"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "PriceHourly"
+                    }
+                  },
+                  "Property": "rt_intervals"
+                }
+              },
+              "queryRef": "PriceHourly.rt_intervals",
+              "nativeQueryRef": "rt_intervals"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "PriceHourly"
+                    }
+                  },
+                  "Property": "rt_mean_cad_mwh"
+                }
+              },
+              "queryRef": "PriceHourly.rt_mean_cad_mwh",
+              "nativeQueryRef": "rt_mean_cad_mwh"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "PriceHourly"
+                    }
+                  },
+                  "Property": "day_ahead_cad_mwh"
+                }
+              },
+              "queryRef": "PriceHourly.day_ahead_cad_mwh",
+              "nativeQueryRef": "day_ahead_cad_mwh"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "PriceHourly"
+                    }
+                  },
+                  "Property": "spread_cad_mwh"
+                }
+              },
+              "queryRef": "PriceHourly.spread_cad_mwh",
+              "nativeQueryRef": "spread_cad_mwh"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Coverage and exact hourly values'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

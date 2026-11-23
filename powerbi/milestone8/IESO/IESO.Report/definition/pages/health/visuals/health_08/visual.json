@@ -1,0 +1,186 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "health_08",
+  "position": {
+    "x": 15,
+    "y": 260,
+    "z": 7000,
+    "height": 160,
+    "width": 1405,
+    "tabOrder": 7000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthRuns"
+                    }
+                  },
+                  "Property": "batch_id"
+                }
+              },
+              "queryRef": "HealthRuns.batch_id",
+              "nativeQueryRef": "batch_id"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthRuns"
+                    }
+                  },
+                  "Property": "requested_start"
+                }
+              },
+              "queryRef": "HealthRuns.requested_start",
+              "nativeQueryRef": "requested_start"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthRuns"
+                    }
+                  },
+                  "Property": "requested_end"
+                }
+              },
+              "queryRef": "HealthRuns.requested_end",
+              "nativeQueryRef": "requested_end"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthRuns"
+                    }
+                  },
+                  "Property": "data_start"
+                }
+              },
+              "queryRef": "HealthRuns.data_start",
+              "nativeQueryRef": "data_start"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthRuns"
+                    }
+                  },
+                  "Property": "selected_delivery_hour"
+                }
+              },
+              "queryRef": "HealthRuns.selected_delivery_hour",
+              "nativeQueryRef": "selected_delivery_hour"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthRuns"
+                    }
+                  },
+                  "Property": "spark_passed"
+                }
+              },
+              "queryRef": "HealthRuns.spark_passed",
+              "nativeQueryRef": "spark_passed"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthRuns"
+                    }
+                  },
+                  "Property": "spark_completed_utc"
+                }
+              },
+              "queryRef": "HealthRuns.spark_completed_utc",
+              "nativeQueryRef": "spark_completed_utc"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthRuns"
+                    }
+                  },
+                  "Property": "final_batch_status"
+                }
+              },
+              "queryRef": "HealthRuns.final_batch_status",
+              "nativeQueryRef": "final_batch_status"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthRuns"
+                    }
+                  },
+                  "Property": "final_batch_completed_utc"
+                }
+              },
+              "queryRef": "HealthRuns.final_batch_completed_utc",
+              "nativeQueryRef": "final_batch_completed_utc"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthRuns"
+                    }
+                  },
+                  "Property": "spark_seconds"
+                }
+              },
+              "queryRef": "HealthRuns.spark_seconds",
+              "nativeQueryRef": "spark_seconds"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Requested processing window and separate completion evidence'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "prices_07",
+  "position": {
+    "x": 15,
+    "y": 565,
+    "z": 6000,
+    "height": 330,
+    "width": 700,
+    "tabOrder": 6000
+  },
+  "visual": {
+    "visualType": "lineChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "PriceHourly"
+                    }
+                  },
+                  "Property": "delivery_hour"
+                }
+              },
+              "queryRef": "PriceHourly.delivery_hour",
+              "nativeQueryRef": "delivery_hour",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "RT minus DA CAD per MWh"
+                }
+              },
+              "queryRef": "Metrics.RT minus DA CAD per MWh",
+              "nativeQueryRef": "RT minus DA CAD per MWh"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'RT minus DA | CAD/MWh | missing/unmatched hours stay blank'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

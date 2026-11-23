@@ -1,0 +1,158 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "compare_11",
+  "position": {
+    "x": 15,
+    "y": 530,
+    "z": 10000,
+    "height": 210,
+    "width": 1405,
+    "tabOrder": 10000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Calendar"
+                    }
+                  },
+                  "Property": "weekday"
+                }
+              },
+              "queryRef": "Calendar.weekday",
+              "nativeQueryRef": "weekday"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Paired Current Price"
+                }
+              },
+              "queryRef": "Metrics.Paired Current Price",
+              "nativeQueryRef": "Paired Current Price"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Paired Previous Price"
+                }
+              },
+              "queryRef": "Metrics.Paired Previous Price",
+              "nativeQueryRef": "Paired Previous Price"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Paired Price Change"
+                }
+              },
+              "queryRef": "Metrics.Paired Price Change",
+              "nativeQueryRef": "Paired Price Change"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Price Observations"
+                }
+              },
+              "queryRef": "Metrics.Week Price Observations",
+              "nativeQueryRef": "Week Price Observations"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Previous Price Observations"
+                }
+              },
+              "queryRef": "Metrics.Previous Price Observations",
+              "nativeQueryRef": "Previous Price Observations"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Paired Price Intervals"
+                }
+              },
+              "queryRef": "Metrics.Paired Price Intervals",
+              "nativeQueryRef": "Paired Price Intervals"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Expected Intervals"
+                }
+              },
+              "queryRef": "Metrics.Week Expected Intervals",
+              "nativeQueryRef": "Week Expected Intervals"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Aligned weekday values and both-period coverage'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

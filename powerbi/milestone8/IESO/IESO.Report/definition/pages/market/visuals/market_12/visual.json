@@ -1,0 +1,246 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "market_12",
+  "position": {
+    "x": 730,
+    "y": 560,
+    "z": 11000,
+    "height": 335,
+    "width": 690,
+    "tabOrder": 11000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "delivery_date"
+                }
+              },
+              "queryRef": "Coverage.delivery_date",
+              "nativeQueryRef": "delivery_date"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "source"
+                }
+              },
+              "queryRef": "Coverage.source",
+              "nativeQueryRef": "source"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "observed_slots"
+                }
+              },
+              "queryRef": "Coverage.observed_slots",
+              "nativeQueryRef": "observed_slots"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "expected_slots"
+                }
+              },
+              "queryRef": "Coverage.expected_slots",
+              "nativeQueryRef": "expected_slots"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "missing_slots"
+                }
+              },
+              "queryRef": "Coverage.missing_slots",
+              "nativeQueryRef": "missing_slots"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "reported_entities"
+                }
+              },
+              "queryRef": "Coverage.reported_entities",
+              "nativeQueryRef": "reported_entities"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "coverage_note"
+                }
+              },
+              "queryRef": "Coverage.coverage_note",
+              "nativeQueryRef": "coverage_note"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Measurement coverage | any-location price coverage is not all-location completeness'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "ce4702ccf059b2ae6c98",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Coverage"
+              }
+            },
+            "Property": "delivery_date"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "3d49faa763b2b52964bf",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Coverage"
+              }
+            },
+            "Property": "source"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "999c5a83c26e4bb4c9c0",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Coverage"
+              }
+            },
+            "Property": "observed_slots"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "51290617cce37e669108",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Coverage"
+              }
+            },
+            "Property": "expected_slots"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "23ef74383985c35c4c09",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Coverage"
+              }
+            },
+            "Property": "missing_slots"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "3d6d3392135b9f14ea48",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Coverage"
+              }
+            },
+            "Property": "reported_entities"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "9c68c75bead101102699",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Coverage"
+              }
+            },
+            "Property": "coverage_note"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
+  }
+}

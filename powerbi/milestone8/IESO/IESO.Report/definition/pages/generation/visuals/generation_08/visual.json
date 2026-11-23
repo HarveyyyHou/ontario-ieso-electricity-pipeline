@@ -1,0 +1,121 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "generation_08",
+  "position": {
+    "x": 15,
+    "y": 545,
+    "z": 5000,
+    "height": 350,
+    "width": 700,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "lineChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "GeneratorHourly"
+                    }
+                  },
+                  "Property": "delivery_hour"
+                }
+              },
+              "queryRef": "GeneratorHourly.delivery_hour",
+              "nativeQueryRef": "delivery_hour",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Facility Output MW"
+                }
+              },
+              "queryRef": "Metrics.Facility Output MW",
+              "nativeQueryRef": "Facility Output MW"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Facility Capability MW"
+                }
+              },
+              "queryRef": "Metrics.Facility Capability MW",
+              "nativeQueryRef": "Facility Capability MW"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Facility Forecast MW"
+                }
+              },
+              "queryRef": "Metrics.Facility Forecast MW",
+              "nativeQueryRef": "Facility Forecast MW"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Facility Available Capacity MW"
+                }
+              },
+              "queryRef": "Metrics.Facility Available Capacity MW",
+              "nativeQueryRef": "Facility Available Capacity MW"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Selected facilities | actual output, capability, forecast and available capacity remain separate'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
