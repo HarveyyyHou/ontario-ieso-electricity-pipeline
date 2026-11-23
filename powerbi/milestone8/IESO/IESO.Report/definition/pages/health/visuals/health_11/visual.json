@@ -1,0 +1,144 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "health_11",
+  "position": {
+    "x": 15,
+    "y": 730,
+    "z": 10000,
+    "height": 165,
+    "width": 1405,
+    "tabOrder": 10000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "delivery_date"
+                }
+              },
+              "queryRef": "Coverage.delivery_date",
+              "nativeQueryRef": "delivery_date"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "source"
+                }
+              },
+              "queryRef": "Coverage.source",
+              "nativeQueryRef": "source"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "observation_rows"
+                }
+              },
+              "queryRef": "Coverage.observation_rows",
+              "nativeQueryRef": "observation_rows"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "observed_slots"
+                }
+              },
+              "queryRef": "Coverage.observed_slots",
+              "nativeQueryRef": "observed_slots"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "expected_slots"
+                }
+              },
+              "queryRef": "Coverage.expected_slots",
+              "nativeQueryRef": "expected_slots"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "missing_slots"
+                }
+              },
+              "queryRef": "Coverage.missing_slots",
+              "nativeQueryRef": "missing_slots"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Coverage"
+                    }
+                  },
+                  "Property": "coverage_note"
+                }
+              },
+              "queryRef": "Coverage.coverage_note",
+              "nativeQueryRef": "coverage_note"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Independent data coverage | processing success does not certify a full day/week'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

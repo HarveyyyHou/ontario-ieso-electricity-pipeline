@@ -1,0 +1,158 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "compare_12",
+  "position": {
+    "x": 15,
+    "y": 750,
+    "z": 11000,
+    "height": 145,
+    "width": 1405,
+    "tabOrder": 11000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Calendar"
+                    }
+                  },
+                  "Property": "weekday"
+                }
+              },
+              "queryRef": "Calendar.weekday",
+              "nativeQueryRef": "weekday"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Paired Current Generation MW"
+                }
+              },
+              "queryRef": "Metrics.Paired Current Generation MW",
+              "nativeQueryRef": "Paired Current Generation MW"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Paired Previous Generation MW"
+                }
+              },
+              "queryRef": "Metrics.Paired Previous Generation MW",
+              "nativeQueryRef": "Paired Previous Generation MW"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Paired Generation Change MW"
+                }
+              },
+              "queryRef": "Metrics.Paired Generation Change MW",
+              "nativeQueryRef": "Paired Generation Change MW"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Paired Generation Hours"
+                }
+              },
+              "queryRef": "Metrics.Paired Generation Hours",
+              "nativeQueryRef": "Paired Generation Hours"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Demand Observations"
+                }
+              },
+              "queryRef": "Metrics.Week Demand Observations",
+              "nativeQueryRef": "Week Demand Observations"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Previous Demand Peak Observations"
+                }
+              },
+              "queryRef": "Metrics.Previous Demand Peak Observations",
+              "nativeQueryRef": "Previous Demand Peak Observations"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Paired Demand Peak Intervals"
+                }
+              },
+              "queryRef": "Metrics.Paired Demand Peak Intervals",
+              "nativeQueryRef": "Paired Demand Peak Intervals"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Reported generation | matching hours with output for every facility in each report; facility rosters can differ'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

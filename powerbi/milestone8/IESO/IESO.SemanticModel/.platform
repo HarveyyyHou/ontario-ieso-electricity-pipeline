@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "IESO"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "4a3740bb-526e-4011-9983-373c569b4a25"
+  }
+}

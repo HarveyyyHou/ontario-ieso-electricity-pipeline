@@ -1,0 +1,172 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "health_09",
+  "position": {
+    "x": 15,
+    "y": 430,
+    "z": 8000,
+    "height": 290,
+    "width": 900,
+    "tabOrder": 8000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthReports"
+                    }
+                  },
+                  "Property": "source"
+                }
+              },
+              "queryRef": "HealthReports.source",
+              "nativeQueryRef": "source"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthReports"
+                    }
+                  },
+                  "Property": "delivery_date"
+                }
+              },
+              "queryRef": "HealthReports.delivery_date",
+              "nativeQueryRef": "delivery_date"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthReports"
+                    }
+                  },
+                  "Property": "delivery_hour"
+                }
+              },
+              "queryRef": "HealthReports.delivery_hour",
+              "nativeQueryRef": "delivery_hour"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthReports"
+                    }
+                  },
+                  "Property": "expected_observations"
+                }
+              },
+              "queryRef": "HealthReports.expected_observations",
+              "nativeQueryRef": "expected_observations"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthReports"
+                    }
+                  },
+                  "Property": "accepted_unique"
+                }
+              },
+              "queryRef": "HealthReports.accepted_unique",
+              "nativeQueryRef": "accepted_unique"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthReports"
+                    }
+                  },
+                  "Property": "rejected"
+                }
+              },
+              "queryRef": "HealthReports.rejected",
+              "nativeQueryRef": "rejected"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthReports"
+                    }
+                  },
+                  "Property": "repeated_deliveries"
+                }
+              },
+              "queryRef": "HealthReports.repeated_deliveries",
+              "nativeQueryRef": "repeated_deliveries"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthReports"
+                    }
+                  },
+                  "Property": "archive_recovered"
+                }
+              },
+              "queryRef": "HealthReports.archive_recovered",
+              "nativeQueryRef": "archive_recovered"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "HealthReports"
+                    }
+                  },
+                  "Property": "without_kafka_delivery"
+                }
+              },
+              "queryRef": "HealthReports.without_kafka_delivery",
+              "nativeQueryRef": "without_kafka_delivery"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Observation reconciliation and archive recovery | null for metrics not recorded on that route'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

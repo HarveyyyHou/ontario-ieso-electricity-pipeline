@@ -1,0 +1,158 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "health_02",
+  "position": {
+    "x": 15,
+    "y": 915,
+    "z": 1000,
+    "height": 75,
+    "width": 1400,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Last Covered Market UTC"
+                }
+              },
+              "queryRef": "Metrics.Last Covered Market UTC",
+              "nativeQueryRef": "Last Covered Market UTC"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Last Covered Demand UTC"
+                }
+              },
+              "queryRef": "Metrics.Last Covered Demand UTC",
+              "nativeQueryRef": "Last Covered Demand UTC"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Last Covered DA UTC"
+                }
+              },
+              "queryRef": "Metrics.Last Covered DA UTC",
+              "nativeQueryRef": "Last Covered DA UTC"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Last Generator Report UTC"
+                }
+              },
+              "queryRef": "Metrics.Last Generator Report UTC",
+              "nativeQueryRef": "Last Generator Report UTC"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Last Generator Output UTC"
+                }
+              },
+              "queryRef": "Metrics.Last Generator Output UTC",
+              "nativeQueryRef": "Last Generator Output UTC"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Import Refresh UTC"
+                }
+              },
+              "queryRef": "Metrics.Import Refresh UTC",
+              "nativeQueryRef": "Import Refresh UTC"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Snapshot Export UTC"
+                }
+              },
+              "queryRef": "Metrics.Snapshot Export UTC",
+              "nativeQueryRef": "Snapshot Export UTC"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Snapshot State"
+                }
+              },
+              "queryRef": "Metrics.Snapshot State",
+              "nativeQueryRef": "Snapshot State"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Freshness | UTC timestamps; source coverage and report refresh are separate'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "week_12",
+  "position": {
+    "x": 730,
+    "y": 540,
+    "z": 11000,
+    "height": 355,
+    "width": 690,
+    "tabOrder": 11000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Calendar"
+                    }
+                  },
+                  "Property": "weekday"
+                }
+              },
+              "queryRef": "Calendar.weekday",
+              "nativeQueryRef": "weekday"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Price Observations"
+                }
+              },
+              "queryRef": "Metrics.Week Price Observations",
+              "nativeQueryRef": "Week Price Observations"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Demand Observations"
+                }
+              },
+              "queryRef": "Metrics.Week Demand Observations",
+              "nativeQueryRef": "Week Demand Observations"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Expected Intervals"
+                }
+              },
+              "queryRef": "Metrics.Week Expected Intervals",
+              "nativeQueryRef": "Week Expected Intervals"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Minimum Price"
+                }
+              },
+              "queryRef": "Metrics.Week Minimum Price",
+              "nativeQueryRef": "Week Minimum Price"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Maximum Price"
+                }
+              },
+              "queryRef": "Metrics.Week Maximum Price",
+              "nativeQueryRef": "Week Maximum Price"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Negative Intervals"
+                }
+              },
+              "queryRef": "Metrics.Week Negative Intervals",
+              "nativeQueryRef": "Week Negative Intervals"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Missing Price Intervals"
+                }
+              },
+              "queryRef": "Metrics.Week Missing Price Intervals",
+              "nativeQueryRef": "Week Missing Price Intervals"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Missing Demand Intervals"
+                }
+              },
+              "queryRef": "Metrics.Week Missing Demand Intervals",
+              "nativeQueryRef": "Week Missing Demand Intervals"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Day-by-day availability and unusual prices'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

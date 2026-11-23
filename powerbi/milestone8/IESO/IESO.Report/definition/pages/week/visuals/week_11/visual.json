@@ -1,0 +1,116 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "name": "week_11",
+  "position": {
+    "x": 15,
+    "y": 540,
+    "z": 10000,
+    "height": 355,
+    "width": 700,
+    "tabOrder": 10000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Calendar"
+                    }
+                  },
+                  "Property": "weekday"
+                }
+              },
+              "queryRef": "Calendar.weekday",
+              "nativeQueryRef": "weekday"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "FuelHourly"
+                    }
+                  },
+                  "Property": "fuel_type"
+                }
+              },
+              "queryRef": "FuelHourly.fuel_type",
+              "nativeQueryRef": "fuel_type"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Fuel Mean Output MW"
+                }
+              },
+              "queryRef": "Metrics.Week Fuel Mean Output MW",
+              "nativeQueryRef": "Week Fuel Mean Output MW"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Fuel Hours"
+                }
+              },
+              "queryRef": "Metrics.Week Fuel Hours",
+              "nativeQueryRef": "Week Fuel Hours"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Metrics"
+                    }
+                  },
+                  "Property": "Week Fuel Missing Output Records"
+                }
+              },
+              "queryRef": "Metrics.Week Fuel Missing Output Records",
+              "nativeQueryRef": "Week Fuel Missing Output Records"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Reported fuel output | average MW over observed hours; no sum across time'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

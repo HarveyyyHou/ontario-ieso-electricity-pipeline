@@ -1,0 +1,454 @@
+// Selected Day
+Selected Day =
+COALESCE(SELECTEDVALUE('Calendar'[delivery_date]),MAXX(ALL('Calendar'),'Calendar'[delivery_date]))
+
+// Selected Week
+Selected Week =
+COALESCE(SELECTEDVALUE('Calendar'[week_start]),MAXX(ALL('Calendar'),'Calendar'[week_start]))
+
+// Elapsed Week Hours
+Elapsed Week Hours =
+VAR w=[Selected Week] VAR marketNow=UTCNOW()-5/24 RETURN MAX(0,MIN(168,INT((marketNow-w)*24)))
+
+// Data State
+Data State =
+IF(COUNTROWS(ALL(MarketIntervals))=0,"NO MARKET MEASUREMENTS LOADED", "Imported observations - inspect coverage and timestamps")
+
+// Day Label
+Day Label =
+"Selected delivery day: " & FORMAT([Selected Day],"yyyy-mm-dd") & " | IESO fixed UTC-05 reporting dates"
+
+// Week Label
+Week Label =
+VAR w=[Selected Week] VAR todayMarket=INT(UTCNOW()-5/24)
+      VAR thisMonday=todayMarket-WEEKDAY(todayMarket,2)+1
+      RETURN IF(w=thisMonday,"This week: ",IF(w<thisMonday,"Historical week: ","Future week: "))
+      & FORMAT(w,"yyyy-mm-dd") & " to " & FORMAT(w+6,"yyyy-mm-dd")
+      & " | elapsed complete hours: " & FORMAT([Elapsed Week Hours],"0") & "/168"
+
+// Comparison Label
+Comparison Label =
+VAR w=[Selected Week] VAR hours=[Elapsed Week Hours]
+      RETURN "Aligned periods [start, end): " & FORMAT(w,"yyyy-mm-dd HH:mm") & " to "
+      & FORMAT(w+hours/24,"yyyy-mm-dd HH:mm") & " versus " & FORMAT(w-7,"yyyy-mm-dd HH:mm")
+      & " to " & FORMAT(w-7+hours/24,"yyyy-mm-dd HH:mm") & " | IESO reporting clock"
+
+// Last Covered Market UTC
+Last Covered Market UTC =
+MAXX(FILTER(ALL(MarketIntervals),NOT ISBLANK(MarketIntervals[price_cad_mwh])),MarketIntervals[interval_end_utc])
+
+// Last Covered Demand UTC
+Last Covered Demand UTC =
+MAXX(FILTER(ALL(MarketIntervals),NOT ISBLANK(MarketIntervals[demand_mw])),MarketIntervals[interval_end_utc])
+
+// Last Covered DA UTC
+Last Covered DA UTC =
+MAXX(FILTER(ALL(PriceHourly),NOT ISBLANK(PriceHourly[day_ahead_cad_mwh])),PriceHourly[delivery_date]+PriceHourly[delivery_hour]/24+5/24)
+
+// Last Generator Report UTC
+Last Generator Report UTC =
+MAXX(ALL(GeneratorHourly),GeneratorHourly[delivery_date]+GeneratorHourly[delivery_hour]/24+5/24)
+
+// Last Generator Output UTC
+Last Generator Output UTC =
+MAXX(FILTER(ALL(GeneratorHourly),NOT ISBLANK(GeneratorHourly[output_mw])),GeneratorHourly[delivery_date]+GeneratorHourly[delivery_hour]/24+5/24)
+
+// Import Refresh UTC
+Import Refresh UTC =
+MAX(RefreshInfo[refresh_utc])
+
+// Snapshot Export UTC
+Snapshot Export UTC =
+MAX(Snapshot[exported_utc])
+
+// Snapshot State
+Snapshot State =
+SELECTEDVALUE(Snapshot[source_state],"No snapshot metadata")
+
+// Day Price CAD per MWh
+Day Price CAD per MWh =
+VAR d=[Selected Day] RETURN CALCULATE(AVERAGE(MarketIntervals[price_cad_mwh]),KEEPFILTERS(MarketIntervals[delivery_date]=d))
+
+// Day Demand MW
+Day Demand MW =
+VAR d=[Selected Day] RETURN CALCULATE(AVERAGE(MarketIntervals[demand_mw]),KEEPFILTERS(MarketIntervals[delivery_date]=d))
+
+// Day Demand Peak MW
+Day Demand Peak MW =
+VAR d=[Selected Day] RETURN CALCULATE(MAX(MarketIntervals[demand_mw]),KEEPFILTERS(MarketIntervals[delivery_date]=d))
+
+// Day Minimum Price
+Day Minimum Price =
+VAR d=[Selected Day] RETURN CALCULATE(MIN(MarketIntervals[price_cad_mwh]),KEEPFILTERS(MarketIntervals[delivery_date]=d))
+
+// Day Maximum Price
+Day Maximum Price =
+VAR d=[Selected Day] RETURN CALCULATE(MAX(MarketIntervals[price_cad_mwh]),KEEPFILTERS(MarketIntervals[delivery_date]=d))
+
+// Day Price Observations
+Day Price Observations =
+VAR d=[Selected Day] RETURN CALCULATE(COUNT(MarketIntervals[price_cad_mwh]),KEEPFILTERS(MarketIntervals[delivery_date]=d))
+
+// Day Demand Observations
+Day Demand Observations =
+VAR d=[Selected Day] RETURN CALCULATE(COUNT(MarketIntervals[demand_mw]),KEEPFILTERS(MarketIntervals[delivery_date]=d))
+
+// Day Negative Price
+Day Negative Price =
+VAR d=[Selected Day] VAR p=AVERAGE(MarketIntervals[price_cad_mwh])
+      RETURN IF(SELECTEDVALUE(MarketIntervals[delivery_date])=d && p<0,p)
+
+// Day Price Coverage
+Day Price Coverage =
+DIVIDE([Day Price Observations],288)
+
+// Day Demand Coverage
+Day Demand Coverage =
+DIVIDE([Day Demand Observations],288)
+
+// Week Daily Price
+Week Daily Price =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow)) RETURN AVERAGEX(observations,MarketIntervals[price_cad_mwh])
+
+// Week Observed Demand Peak MW
+Week Observed Demand Peak MW =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow)) RETURN MAXX(observations,MarketIntervals[demand_mw])
+
+// Week Price Observations
+Week Price Observations =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow)) RETURN COALESCE(COUNTX(observations,MarketIntervals[price_cad_mwh]),0)
+
+// Week Demand Observations
+Week Demand Observations =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow)) RETURN COALESCE(COUNTX(observations,MarketIntervals[demand_mw]),0)
+
+// Week Minimum Price
+Week Minimum Price =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow)) RETURN MINX(observations,MarketIntervals[price_cad_mwh])
+
+// Week Maximum Price
+Week Maximum Price =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow)) RETURN MAXX(observations,MarketIntervals[price_cad_mwh])
+
+// Week Negative Intervals
+Week Negative Intervals =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow)) RETURN VAR valid=FILTER(observations,NOT ISBLANK(MarketIntervals[price_cad_mwh])) RETURN IF(COUNTROWS(valid)>0,COUNTROWS(FILTER(valid,MarketIntervals[price_cad_mwh]<0)))
+
+// Week Price Population SD
+Week Price Population SD =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow)) RETURN VAR valid=FILTER(observations,NOT ISBLANK(MarketIntervals[price_cad_mwh])) RETURN IF(COUNTROWS(valid)>=2,STDEVX.P(valid,MarketIntervals[price_cad_mwh]))
+
+// Week Expected Intervals
+Week Expected Intervals =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      RETURN IF(ISBLANK(dow),cap*12,MAX(0,MIN(24,cap-(dow-1)*24))*12)
+
+// Week Missing Price Intervals
+Week Missing Price Intervals =
+[Week Expected Intervals]-[Week Price Observations]
+
+// Week Missing Demand Intervals
+Week Missing Demand Intervals =
+[Week Expected Intervals]-[Week Demand Observations]
+
+// Paired Current Price
+Paired Current Price =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow))
+          VAR pairs=ADDCOLUMNS(observations,"PreviousValue",VAR stamp=MarketIntervals[interval_start_utc]
+            RETURN LOOKUPVALUE(MarketIntervals[price_cad_mwh],MarketIntervals[interval_start_utc],stamp-7))
+          VAR matched=FILTER(pairs,NOT ISBLANK(MarketIntervals[price_cad_mwh]) && NOT ISBLANK([PreviousValue])) RETURN AVERAGEX(matched,MarketIntervals[price_cad_mwh])
+
+// Paired Previous Price
+Paired Previous Price =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow))
+          VAR pairs=ADDCOLUMNS(observations,"PreviousValue",VAR stamp=MarketIntervals[interval_start_utc]
+            RETURN LOOKUPVALUE(MarketIntervals[price_cad_mwh],MarketIntervals[interval_start_utc],stamp-7))
+          VAR matched=FILTER(pairs,NOT ISBLANK(MarketIntervals[price_cad_mwh]) && NOT ISBLANK([PreviousValue])) RETURN AVERAGEX(matched,[PreviousValue])
+
+// Paired Price Change
+Paired Price Change =
+VAR a=[Paired Current Price] VAR b=[Paired Previous Price] RETURN IF(NOT ISBLANK(a)&&NOT ISBLANK(b),a-b)
+
+// Paired Price Intervals
+Paired Price Intervals =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow))
+          VAR pairs=ADDCOLUMNS(observations,"PreviousValue",VAR stamp=MarketIntervals[interval_start_utc]
+            RETURN LOOKUPVALUE(MarketIntervals[price_cad_mwh],MarketIntervals[interval_start_utc],stamp-7))
+          VAR matched=FILTER(pairs,NOT ISBLANK(MarketIntervals[price_cad_mwh]) && NOT ISBLANK([PreviousValue])) RETURN COALESCE(COUNTROWS(matched),0)
+
+// Previous Price Observations
+Previous Price Observations =
+VAR w=[Selected Week]-7 VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow)) RETURN COALESCE(COUNTX(observations,MarketIntervals[price_cad_mwh]),0)
+
+// Paired Current Demand Peak
+Paired Current Demand Peak =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow))
+          VAR pairs=ADDCOLUMNS(observations,"PreviousValue",VAR stamp=MarketIntervals[interval_start_utc]
+            RETURN LOOKUPVALUE(MarketIntervals[demand_mw],MarketIntervals[interval_start_utc],stamp-7))
+          VAR matched=FILTER(pairs,NOT ISBLANK(MarketIntervals[demand_mw]) && NOT ISBLANK([PreviousValue])) RETURN MAXX(matched,MarketIntervals[demand_mw])
+
+// Paired Previous Demand Peak
+Paired Previous Demand Peak =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow))
+          VAR pairs=ADDCOLUMNS(observations,"PreviousValue",VAR stamp=MarketIntervals[interval_start_utc]
+            RETURN LOOKUPVALUE(MarketIntervals[demand_mw],MarketIntervals[interval_start_utc],stamp-7))
+          VAR matched=FILTER(pairs,NOT ISBLANK(MarketIntervals[demand_mw]) && NOT ISBLANK([PreviousValue])) RETURN MAXX(matched,[PreviousValue])
+
+// Paired Demand Peak Change
+Paired Demand Peak Change =
+VAR a=[Paired Current Demand Peak] VAR b=[Paired Previous Demand Peak] RETURN IF(NOT ISBLANK(a)&&NOT ISBLANK(b),a-b)
+
+// Paired Demand Peak Intervals
+Paired Demand Peak Intervals =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow))
+          VAR pairs=ADDCOLUMNS(observations,"PreviousValue",VAR stamp=MarketIntervals[interval_start_utc]
+            RETURN LOOKUPVALUE(MarketIntervals[demand_mw],MarketIntervals[interval_start_utc],stamp-7))
+          VAR matched=FILTER(pairs,NOT ISBLANK(MarketIntervals[demand_mw]) && NOT ISBLANK([PreviousValue])) RETURN COALESCE(COUNTROWS(matched),0)
+
+// Previous Demand Peak Observations
+Previous Demand Peak Observations =
+VAR w=[Selected Week]-7 VAR cap=[Elapsed Week Hours]*12
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(MarketIntervals),MarketIntervals[delivery_date]>=w
+        && MarketIntervals[delivery_date]<w+7
+        && (MarketIntervals[delivery_date]-w)*288+(MarketIntervals[delivery_hour]-1)*12+MarketIntervals[interval]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(MarketIntervals[delivery_date],2)=dow)) RETURN COALESCE(COUNTX(observations,MarketIntervals[demand_mw]),0)
+
+// Week Fuel Mean Output MW
+Week Fuel Mean Output MW =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(FuelHourly,FuelHourly[delivery_date]>=w && FuelHourly[delivery_date]<w+7
+        && (FuelHourly[delivery_date]-w)*24+FuelHourly[delivery_hour]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(FuelHourly[delivery_date],2)=dow)) RETURN AVERAGEX(observations,FuelHourly[output_mw])
+
+// Week Fuel Hours
+Week Fuel Hours =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(FuelHourly,FuelHourly[delivery_date]>=w && FuelHourly[delivery_date]<w+7
+        && (FuelHourly[delivery_date]-w)*24+FuelHourly[delivery_hour]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(FuelHourly[delivery_date],2)=dow)) RETURN COUNTX(observations,FuelHourly[output_mw])
+
+// Week Fuel Missing Output Records
+Week Fuel Missing Output Records =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(FuelHourly,FuelHourly[delivery_date]>=w && FuelHourly[delivery_date]<w+7
+        && (FuelHourly[delivery_date]-w)*24+FuelHourly[delivery_hour]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(FuelHourly[delivery_date],2)=dow)) RETURN SUMX(observations,FuelHourly[reported_facilities]-FuelHourly[facilities_with_output])
+
+// Paired Current Generation MW
+Paired Current Generation MW =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(DemandGeneration),DemandGeneration[delivery_date]>=w && DemandGeneration[delivery_date]<w+7
+        && (DemandGeneration[delivery_date]-w)*24+DemandGeneration[delivery_hour]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(DemandGeneration[delivery_date],2)=dow))
+      VAR pairs=ADDCOLUMNS(observations,"PreviousOutput",VAR d=DemandGeneration[delivery_date] VAR h=DemandGeneration[delivery_hour]
+        RETURN LOOKUPVALUE(DemandGeneration[reported_output_mw],DemandGeneration[delivery_date],d-7,DemandGeneration[delivery_hour],h),
+        "PreviousFacilities",VAR d=DemandGeneration[delivery_date] VAR h=DemandGeneration[delivery_hour]
+        RETURN LOOKUPVALUE(DemandGeneration[reported_facilities],DemandGeneration[delivery_date],d-7,DemandGeneration[delivery_hour],h),
+        "PreviousMeasured",VAR d=DemandGeneration[delivery_date] VAR h=DemandGeneration[delivery_hour]
+        RETURN LOOKUPVALUE(DemandGeneration[facilities_with_output],DemandGeneration[delivery_date],d-7,DemandGeneration[delivery_hour],h))
+      VAR matched=FILTER(pairs,NOT ISBLANK(DemandGeneration[reported_output_mw]) && NOT ISBLANK([PreviousOutput])
+        && DemandGeneration[reported_facilities]>0 && DemandGeneration[reported_facilities]=DemandGeneration[facilities_with_output]
+        && [PreviousFacilities]>0 && [PreviousFacilities]=[PreviousMeasured]) RETURN AVERAGEX(matched,DemandGeneration[reported_output_mw])
+
+// Paired Previous Generation MW
+Paired Previous Generation MW =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(DemandGeneration),DemandGeneration[delivery_date]>=w && DemandGeneration[delivery_date]<w+7
+        && (DemandGeneration[delivery_date]-w)*24+DemandGeneration[delivery_hour]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(DemandGeneration[delivery_date],2)=dow))
+      VAR pairs=ADDCOLUMNS(observations,"PreviousOutput",VAR d=DemandGeneration[delivery_date] VAR h=DemandGeneration[delivery_hour]
+        RETURN LOOKUPVALUE(DemandGeneration[reported_output_mw],DemandGeneration[delivery_date],d-7,DemandGeneration[delivery_hour],h),
+        "PreviousFacilities",VAR d=DemandGeneration[delivery_date] VAR h=DemandGeneration[delivery_hour]
+        RETURN LOOKUPVALUE(DemandGeneration[reported_facilities],DemandGeneration[delivery_date],d-7,DemandGeneration[delivery_hour],h),
+        "PreviousMeasured",VAR d=DemandGeneration[delivery_date] VAR h=DemandGeneration[delivery_hour]
+        RETURN LOOKUPVALUE(DemandGeneration[facilities_with_output],DemandGeneration[delivery_date],d-7,DemandGeneration[delivery_hour],h))
+      VAR matched=FILTER(pairs,NOT ISBLANK(DemandGeneration[reported_output_mw]) && NOT ISBLANK([PreviousOutput])
+        && DemandGeneration[reported_facilities]>0 && DemandGeneration[reported_facilities]=DemandGeneration[facilities_with_output]
+        && [PreviousFacilities]>0 && [PreviousFacilities]=[PreviousMeasured]) RETURN AVERAGEX(matched,[PreviousOutput])
+
+// Paired Generation Hours
+Paired Generation Hours =
+VAR w=[Selected Week] VAR cap=[Elapsed Week Hours]
+      VAR dow=SELECTEDVALUE('Calendar'[weekday_order])
+      VAR observations=FILTER(ALL(DemandGeneration),DemandGeneration[delivery_date]>=w && DemandGeneration[delivery_date]<w+7
+        && (DemandGeneration[delivery_date]-w)*24+DemandGeneration[delivery_hour]-1<cap
+        && (ISBLANK(dow)||WEEKDAY(DemandGeneration[delivery_date],2)=dow))
+      VAR pairs=ADDCOLUMNS(observations,"PreviousOutput",VAR d=DemandGeneration[delivery_date] VAR h=DemandGeneration[delivery_hour]
+        RETURN LOOKUPVALUE(DemandGeneration[reported_output_mw],DemandGeneration[delivery_date],d-7,DemandGeneration[delivery_hour],h),
+        "PreviousFacilities",VAR d=DemandGeneration[delivery_date] VAR h=DemandGeneration[delivery_hour]
+        RETURN LOOKUPVALUE(DemandGeneration[reported_facilities],DemandGeneration[delivery_date],d-7,DemandGeneration[delivery_hour],h),
+        "PreviousMeasured",VAR d=DemandGeneration[delivery_date] VAR h=DemandGeneration[delivery_hour]
+        RETURN LOOKUPVALUE(DemandGeneration[facilities_with_output],DemandGeneration[delivery_date],d-7,DemandGeneration[delivery_hour],h))
+      VAR matched=FILTER(pairs,NOT ISBLANK(DemandGeneration[reported_output_mw]) && NOT ISBLANK([PreviousOutput])
+        && DemandGeneration[reported_facilities]>0 && DemandGeneration[reported_facilities]=DemandGeneration[facilities_with_output]
+        && [PreviousFacilities]>0 && [PreviousFacilities]=[PreviousMeasured]) RETURN COALESCE(COUNTROWS(matched),0)
+
+// Paired Generation Change MW
+Paired Generation Change MW =
+VAR a=[Paired Current Generation MW] VAR b=[Paired Previous Generation MW] RETURN IF(NOT ISBLANK(a)&&NOT ISBLANK(b),a-b)
+
+// RT Hourly CAD per MWh
+RT Hourly CAD per MWh =
+VAR d=[Selected Day] RETURN CALCULATE(AVERAGE(PriceHourly[rt_mean_cad_mwh]),KEEPFILTERS(PriceHourly[delivery_date]=d))
+
+// DA Hourly CAD per MWh
+DA Hourly CAD per MWh =
+VAR d=[Selected Day] RETURN CALCULATE(AVERAGE(PriceHourly[day_ahead_cad_mwh]),KEEPFILTERS(PriceHourly[delivery_date]=d))
+
+// RT minus DA CAD per MWh
+RT minus DA CAD per MWh =
+VAR d=[Selected Day] RETURN CALCULATE(AVERAGE(PriceHourly[spread_cad_mwh]),KEEPFILTERS(PriceHourly[delivery_date]=d))
+
+// Hourly Demand MW
+Hourly Demand MW =
+VAR d=[Selected Day] RETURN CALCULATE(AVERAGE(DemandGeneration[demand_mw]),KEEPFILTERS(DemandGeneration[delivery_date]=d))
+
+// Reported Generation MW
+Reported Generation MW =
+VAR d=[Selected Day] RETURN CALCULATE(AVERAGE(DemandGeneration[reported_output_mw]),KEEPFILTERS(DemandGeneration[delivery_date]=d))
+
+// Facility Output MW
+Facility Output MW =
+VAR d=[Selected Day] RETURN CALCULATE(SUM(GeneratorHourly[output_mw]),KEEPFILTERS(GeneratorHourly[delivery_date]=d))
+
+// Facility Capability MW
+Facility Capability MW =
+VAR d=[Selected Day] RETURN CALCULATE(SUM(GeneratorHourly[capability_mw]),KEEPFILTERS(GeneratorHourly[delivery_date]=d))
+
+// Facility Forecast MW
+Facility Forecast MW =
+VAR d=[Selected Day] RETURN CALCULATE(SUM(GeneratorHourly[forecast_mw]),KEEPFILTERS(GeneratorHourly[delivery_date]=d))
+
+// Facility Available Capacity MW
+Facility Available Capacity MW =
+VAR d=[Selected Day] RETURN CALCULATE(SUM(GeneratorHourly[available_capacity_mw]),KEEPFILTERS(GeneratorHourly[delivery_date]=d))
+
+// Expected Reports
+Expected Reports =
+SUM(HealthRuns[expected_reports])
+
+// Received Reports
+Received Reports =
+SUM(HealthRuns[received_reports])
+
+// Expected RT Observations
+Expected RT Observations =
+CALCULATE(SUM(HealthReports[expected_observations]),HealthReports[source] IN {"rt_lmp","rt_totals"})
+
+// Accepted RT Observations
+Accepted RT Observations =
+SUM(HealthReports[accepted_unique])
+
+// Rejected RT Records
+Rejected RT Records =
+SUM(HealthReports[rejected])
+
+// Repeated RT Deliveries
+Repeated RT Deliveries =
+SUM(HealthReports[repeated_deliveries])
+
+// Archive Recovered Reports
+Archive Recovered Reports =
+IF(COUNTROWS(HealthReports)>0,COUNTROWS(FILTER(HealthReports,HealthReports[archive_recovered]="Yes")))
+
+// Spark Duration Seconds
+Spark Duration Seconds =
+MAX(HealthRuns[spark_seconds])
+
+// Spark Completed UTC
+Spark Completed UTC =
+MAX(HealthRuns[spark_completed_utc])
+
+// Final Batch Completed UTC
+Final Batch Completed UTC =
+MAX(HealthRuns[final_batch_completed_utc])
+
+// Processing Status
+Processing Status =
+SELECTEDVALUE(HealthRuns[final_batch_status],"Unknown - no final completion evidence imported")
+
+// Health Scope
+Health Scope =
+"Successful Spark/sealed-inventory evidence. Check ADF Monitor, Application Insights and Databricks for current failures. A successful job does not imply complete dates."

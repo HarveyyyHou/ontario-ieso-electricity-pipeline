@@ -1,0 +1,7 @@
+**/.pbi/
+**/.local/
+**/__pycache__/
+*.pbix
+*.pbit
+*.abf
+*.log
