@@ -1,5 +1,5 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "generation_07",
   "position": {
     "x": 15,
@@ -89,5 +89,51 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "fd8e1166bf9ec991b0e6",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "DemandGeneration"
+              }
+            },
+            "Property": "delivery_hour"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "731c72082665c112c8c0",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Hourly Demand MW"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "69866e7cd84e0a3ca869",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Reported Generation MW"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }

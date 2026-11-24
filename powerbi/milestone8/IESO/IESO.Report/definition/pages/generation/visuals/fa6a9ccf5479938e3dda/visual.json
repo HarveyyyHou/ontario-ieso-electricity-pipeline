@@ -1,5 +1,5 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "fa6a9ccf5479938e3dda",
   "position": {
     "x": 715,
@@ -191,6 +191,34 @@
             }
           ]
         }
+      },
+      {
+        "name": "b250c613db46749bf91d",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Facility Reported Hours"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "37dba3361031ba4bfadf",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Facility Average Output MW"
+          }
+        },
+        "type": "Advanced"
       }
     ]
   }

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "week_12",
   "position": {
     "x": 730,
@@ -168,5 +168,135 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "5df5bff5e4f4431b042f",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Calendar"
+              }
+            },
+            "Property": "weekday"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "b01deac8f3bb65723dd1",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Week Price Observations"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "adccdf8a2d7100a806b3",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Week Demand Observations"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "9c6067255eb68c564118",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Week Expected Intervals"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "f46f9fddd50c430746f8",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Week Minimum Price"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "59d87a74a43d1656cd3d",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Week Maximum Price"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "651056183a286fe9c245",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Week Negative Intervals"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "b91af5980d991aa65364",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Week Missing Price Intervals"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "4c4a397b85d8e35ef64d",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Metrics"
+              }
+            },
+            "Property": "Week Missing Demand Intervals"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }

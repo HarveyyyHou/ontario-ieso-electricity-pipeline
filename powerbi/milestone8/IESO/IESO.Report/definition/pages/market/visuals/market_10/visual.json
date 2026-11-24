@@ -128,37 +128,5 @@
       ]
     },
     "drillFilterOtherVisuals": true
-  },
-  "filterConfig": {
-    "filters": [
-      {
-        "name": "0d98c2ece97079aa6a10",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "Metrics"
-              }
-            },
-            "Property": "Day Demand MW"
-          }
-        },
-        "type": "Advanced"
-      },
-      {
-        "name": "a138f8faa1d4ef23ee13",
-        "field": {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "MarketIntervals"
-              }
-            },
-            "Property": "delivery_hour"
-          }
-        },
-        "type": "Advanced"
-      }
-    ]
   }
 }

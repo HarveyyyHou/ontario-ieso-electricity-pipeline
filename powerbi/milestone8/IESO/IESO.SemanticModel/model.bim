@@ -21883,15 +21883,11 @@
           {
             "name": "PBI_ResultType",
             "value": "Text"
-          },
-          {
-            "name": "PBI_NavigationStepName",
-            "value": "Navigation"
           }
         ],
         "expression": "\"CSV\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
         "kind": "m",
-        "lineageTag": "3c4812a8-ff7d-447f-b7e9-2ad9984b2d3a"
+        "lineageTag": "3b782dea-5c3e-4d5d-a50e-ca8e012c1f6f"
       },
       {
         "name": "pSnapshotFolder",
@@ -21899,15 +21895,11 @@
           {
             "name": "PBI_ResultType",
             "value": "Text"
-          },
-          {
-            "name": "PBI_NavigationStepName",
-            "value": "Navigation"
           }
         ],
         "expression": "\"C:\\ieso_project\\ontario-ieso-electricity-pipeline\\powerbi\\milestone8\\.local\\data\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
         "kind": "m",
-        "lineageTag": "693ad718-1b60-49a5-b33f-c303ad5ba246"
+        "lineageTag": "c1e13453-0e6a-48d0-9d09-f4fcaffad8d3"
       },
       {
         "name": "pServerHostname",
@@ -21915,15 +21907,11 @@
           {
             "name": "PBI_ResultType",
             "value": "Text"
-          },
-          {
-            "name": "PBI_NavigationStepName",
-            "value": "Navigation"
           }
         ],
         "expression": "\"adb-7405605219777405.5.azuredatabricks.net\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
         "kind": "m",
-        "lineageTag": "288454b1-9293-462e-a739-0e8fb4d083bc"
+        "lineageTag": "3bace7cb-6416-4ef3-a92f-f9342fb0ed8f"
       },
       {
         "name": "pHttpPath",
@@ -21935,7 +21923,7 @@
         ],
         "expression": "\"/sql/1.0/warehouses/\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
         "kind": "m",
-        "lineageTag": "c393057b-c659-4092-a5df-995f4dc7bccc"
+        "lineageTag": "7a8a9a83-2728-4dee-aea9-ce6248bc04a6"
       },
       {
         "name": "pLocation",
@@ -21943,15 +21931,11 @@
           {
             "name": "PBI_ResultType",
             "value": "Text"
-          },
-          {
-            "name": "PBI_NavigationStepName",
-            "value": "Navigation"
           }
         ],
         "expression": "\"ABITIBISF-LT.AG_T1\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
         "kind": "m",
-        "lineageTag": "670c152e-1995-4c6c-8493-8b7a68b3d494"
+        "lineageTag": "d133efa4-4c49-41d3-a343-cca654e057a3"
       },
       {
         "name": "pBatchId",
@@ -21959,15 +21943,11 @@
           {
             "name": "PBI_ResultType",
             "value": "Text"
-          },
-          {
-            "name": "PBI_NavigationStepName",
-            "value": "Navigation"
           }
         ],
-        "expression": "\"d99f4e0459d28079c2680094\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
+        "expression": "\"bae74d3c9797eb9fa8ac875a\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
         "kind": "m",
-        "lineageTag": "5b46bdfb-0202-447a-a81b-cd9b4f83107e"
+        "lineageTag": "15a28cef-e997-4d46-a8e5-b8ae6f9ffa08"
       },
       {
         "name": "pStartDate",
@@ -21975,15 +21955,11 @@
           {
             "name": "PBI_ResultType",
             "value": "Date"
-          },
-          {
-            "name": "PBI_NavigationStepName",
-            "value": "Navigation"
           }
         ],
         "expression": "#date(2026,11,2) meta [IsParameterQuery=true, Type=\"Date\", IsParameterQueryRequired=true]",
         "kind": "m",
-        "lineageTag": "607450d2-7d67-44b9-949b-d3d7b2d27db9"
+        "lineageTag": "416c1da8-3459-4f01-8592-2ae9455b94fa"
       },
       {
         "name": "pEndDate",
@@ -21995,7 +21971,7 @@
         ],
         "expression": "#date(2026,11,15) meta [IsParameterQuery=true, Type=\"Date\", IsParameterQueryRequired=true]",
         "kind": "m",
-        "lineageTag": "d2eb1e66-ecf5-4411-86e7-1752d8e0b46b"
+        "lineageTag": "a8e82dea-dcbe-44d2-9938-e708a11352ef"
       },
       {
         "name": "fnLoad",
