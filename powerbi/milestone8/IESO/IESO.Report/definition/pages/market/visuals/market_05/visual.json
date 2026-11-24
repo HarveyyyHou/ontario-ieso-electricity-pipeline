@@ -91,23 +91,5 @@
       ]
     },
     "drillFilterOtherVisuals": true
-  },
-  "filterConfig": {
-    "filters": [
-      {
-        "name": "91dca354262a9dfcbf6a",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "Metrics"
-              }
-            },
-            "Property": "Day Price CAD per MWh"
-          }
-        },
-        "type": "Advanced"
-      }
-    ]
   }
 }

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "market_09",
   "position": {
     "x": 15,
@@ -146,51 +146,5 @@
       ]
     },
     "drillFilterOtherVisuals": true
-  },
-  "filterConfig": {
-    "filters": [
-      {
-        "name": "bd7678bd2c3bc905024f",
-        "field": {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "MarketIntervals"
-              }
-            },
-            "Property": "delivery_hour"
-          }
-        },
-        "type": "Advanced"
-      },
-      {
-        "name": "887fecd4f974b888d3b0",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "Metrics"
-              }
-            },
-            "Property": "Day Price CAD per MWh"
-          }
-        },
-        "type": "Advanced"
-      },
-      {
-        "name": "e149a5ae7c579786770a",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "Metrics"
-              }
-            },
-            "Property": "Day Price Observations"
-          }
-        },
-        "type": "Advanced"
-      }
-    ]
   }
 }
